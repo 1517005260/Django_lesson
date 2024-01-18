@@ -1,0 +1,2 @@
+lesson2：
+小技巧 添加.gitignore后可以加入不想commit的文件
