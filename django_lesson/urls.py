@@ -18,6 +18,6 @@ from django.urls import path,include
 
 
 urlpatterns = [
-   # path('' , include('game.urls')),  ###将game的url写入总url,如果只有一个app就不用解析
-    path('admin/', admin.site.urls),
+    path('' , include('game.urls.index')),  #game界面，此处空解析是因为本项目只有这一个子项目
+    path('admin/', admin.site.urls),  ##管理员界面
 ]
