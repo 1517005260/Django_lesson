@@ -1,3 +1,128 @@
+/* 按顺序写，settings->menu->playground */
+/* 先写父类再写子类 */
+
+.game-settings {
+    width: 100%;
+    height: 100%;
+    background-image: url("/static/image/menu/background.jpg");
+    background-size: 100% 100%;
+    user-select: none;
+}
+
+.game-settings-login {
+    height: 43vh;
+    width: 20vw;
+    position: relative;
+    /* relative使能够被top、left相对定位 */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* 由于相对定位是定位左上角，而我们要定位中心，所以要将整个图形向x,y负方向移动50%个图形大小 */
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 5px;
+}
+
+.game-settings-title {
+    color: white;
+    font-size: 3vh;
+    text-align: center;
+    padding-top: 2vh;
+    margin-bottom: 2vh;
+}
+
+.game-settings-username {
+    display: block;
+    /* 同div展示方式，下个元素换行 */
+    height: 7vh;
+}
+
+.game-settings-password {
+    display: block;
+    height: 7vh;
+}
+
+.game-settings-submit {
+    display: block;
+    height: 7vh;
+}
+
+
+.game-settings-third-part {
+    display: block;
+    height: 7vh;
+}
+
+.game-settings-third-part>img {
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    display: block;
+}
+
+.game-settings-third-part>div {
+    color: white;
+    font-size: 1.5vh;
+    text-align: center;
+    display: block;
+}
+
+.game-settings-item {
+    width: 100%;
+    height: 100%;
+}
+
+.game-settings-item>input {
+    width: 90%;
+    line-height: 3vh;
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.game-settings-item>button {
+    color: white;
+    width: 90%;
+    line-height: 3vh;
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #4CAF50;
+    border-radius: 5px;
+}
+
+.game-settings-error-message {
+    color: red;
+    font-size: 1.2vh;
+    display: inline;
+    /* 下个元素不换行 */
+    float: left;
+    padding-left: 1vw;
+}
+
+.game-settings-option {
+    color: white;
+    font-size: 2vh;
+    display: inline;
+    float: right;
+    padding-right: 1vw;
+    cursor: pointer;
+}
+
+.game-settings-register {
+    height: 43vh;
+    width: 20vw;
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 5px;
+}
+
 .game-menu {
     width: 100%;
     height: 100%;

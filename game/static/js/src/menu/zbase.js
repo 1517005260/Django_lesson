@@ -13,7 +13,7 @@ class GameMenu {
             </div>
             <br>
             <div class="game-menu-field-item game-menu-field-item-settings">
-                设置
+                退出
             </div>
         </div>
         </div>
@@ -23,11 +23,12 @@ class GameMenu {
         this.$single_mode = this.$menu.find('.game-menu-field-item-single-mode');
         this.$multi_mode = this.$menu.find('.game-menu-field-item-multi-mode');
         this.$settings = this.$menu.find('.game-menu-field-item-settings');
+        this.$menu.hide();  //新逻辑：用户进入网站后先进入登录界面，成功后才是菜单
 
         this.start();
     }
 
-    start(){
+    start() {
         this.events();
     }
 
@@ -42,7 +43,7 @@ class GameMenu {
             console.log('click multi mode');
         });
         this.$settings.on('click', function () {
-            console.log('click settings');
+            outer.root.settings.sign_out();
         });
     }
 

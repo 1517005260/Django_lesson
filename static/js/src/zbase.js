@@ -5,9 +5,11 @@
 
 //在html文件中写了：let game = new Game();  就会调用到这里
 export class Game {
-    constructor(id) {
+    constructor(id, os) {  //你在哪个系统登录，os就自动传什么。WEB端默认没有os参数
         this.id = id;
         this.$game = $('#' + id);
+        this.os = os;  //识别是哪个前端
+        this.settings = new Settings(this);
         this.menu = new GameMenu(this);
         this.playground = new GamePlayground(this);
 

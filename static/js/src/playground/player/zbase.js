@@ -23,6 +23,12 @@ class Player extends GameObject {
         this.damage_vx = 0;  //受击后移动的方向
         this.damage_vy = 0;
         this.damage_speed = 0;
+
+        if (this.is_me) {
+            //canvas用图片填充图形
+            this.img = new Image();
+            this.img.src = this.root.root.settings.photo;
+        }
     }
 
     start() {
@@ -181,11 +187,22 @@ class Player extends GameObject {
     }
 
     render() {
-        //画圆
-        this.ctx.beginPath();
-        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-        this.ctx.fillStyle = this.color;
-        this.ctx.fill();
+        if (this.is_me) {
+            //渲染头像的canvas api
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.stroke();
+            this.ctx.clip();
+            this.ctx.drawImage(this.img, this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
+            this.ctx.restore();
+        } else {
+            //人机画纯色圆
+            this.ctx.beginPath();
+            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.fillStyle = this.color;
+            this.ctx.fill();
+        }
     }
 
     on_destroy() {

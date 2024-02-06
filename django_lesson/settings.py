@@ -24,8 +24,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-a1&v&-_fzg&#l8n%_pt2z-qmv!ur+u5##+=hr3)49-5_ymtk5!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# 是否是调试模式
-DEBUG = False
+# 是否是调试模式,若是，则后端有详细报错信息
+DEBUG = True
 
 ALLOWED_HOSTS = ["47.100.76.86","app6534.acapp.acwing.com.cn"]  #租的服务器公网ip,以及acwing分配的域名
 
