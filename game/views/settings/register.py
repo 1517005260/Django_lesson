@@ -20,7 +20,7 @@ def register(request):
     user = User(username = username)
     user.set_password(password)  #存密码hash值
     user.save()  #user创建完毕
-    Player.objects.create(user = user , photo = "https://tse4-mm.cn.bing.net/th/id/OIP-C.awOHeLnpBFpPxef2ZXhakgHaEK?rs=1&pid=ImgDetMain") 
+    Player.objects.create(user = user , photo = "https://app6534.acapp.acwing.com.cn/static/image/menu/icon.jpg") 
     #player创建完毕，用的默认头像
     login(request,user)  #注册完毕后自动登录
     return JsonResponse({'result':"success"})
