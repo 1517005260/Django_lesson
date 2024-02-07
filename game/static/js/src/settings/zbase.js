@@ -100,6 +100,8 @@ class Settings {
         this.$register_login = this.$register.find(".game-settings-option");
         this.$register.hide();
 
+        this.$third_part_login = this.$settings.find(".game-settings-third-part img");
+
         this.start();
     }
 
@@ -111,6 +113,11 @@ class Settings {
     events() {
         this.events_login();
         this.events_register();
+
+        let outer = this;
+        this.$third_part_login.on("click", function () {
+            outer.third_part_login();
+        });
     }
 
     events_login() {
@@ -130,6 +137,20 @@ class Settings {
         });
         this.$register_submit.on("click", function () {
             outer.new_register();
+        });
+    }
+
+    third_part_login() {
+        $.ajax({
+            url: "https://app6534.acapp.acwing.com.cn/settings/acwing/web/apply_code/",
+            type: "GET",
+            success: function (resp) {
+                console.log(resp);
+                if (resp.result === "success") {
+                    window.location.replace(resp.apply_code_url);
+                    //窗口刷新，并重定向到 apply_code_url
+                }
+            }
         });
     }
 

@@ -19,7 +19,7 @@ def getinfo_web(request):
             'result':"未登录"
         })
     else :
-        player = Player.objects.all()[0]
+        player = Player.objects.get(user=user) #查找当前登录的用户
         return JsonResponse({
             'result':"success",
             'username':player.user.username,
