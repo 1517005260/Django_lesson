@@ -586,7 +586,7 @@ class Settings {
 
         this.root.$game.append(this.$settings);
 
-        //接着把定义的元素都取出来
+        //接着把定义的元素都取出来，用于交互操作
         //注意find之前的对象是父类
         this.$login = this.$settings.find(".game-settings-login");
         this.$login_username = this.$login.find(".game-settings-username input");
@@ -611,8 +611,13 @@ class Settings {
     }
 
     start() {
-        this.getinfo();
-        this.events();  //绑定监听函数
+        if (this.platform === "ACAPP") {
+            //acapp端
+            this.getinfo_acapp();
+        } else {
+            this.getinfo_web();
+            this.events();  //绑定监听函数
+        }
     }
 
     events() {
@@ -621,7 +626,7 @@ class Settings {
 
         let outer = this;
         this.$third_part_login.on("click", function () {
-            outer.third_part_login();
+            outer.third_part_login_web();
         });
     }
 
@@ -645,7 +650,7 @@ class Settings {
         });
     }
 
-    third_part_login() {
+    third_part_login_web() {
         $.ajax({
             url: "https://app6534.acapp.acwing.com.cn/settings/acwing/web/apply_code/",
             type: "GET",
@@ -654,8 +659,24 @@ class Settings {
                 if (resp.result === "success") {
                     window.location.replace(resp.apply_code_url);
                     //窗口刷新，并重定向到 apply_code_url
-                }
+                }//acwing的第三方登录如果点击拒绝则会重定向到acwing首页
             }
+        });
+    }
+
+    third_part_login_acapp(appid, redirect_uri, scope, state) {
+        let outer = this;
+
+        this.root.os.api.oauth2.authorize(appid, redirect_uri, scope, state, function (resp) {
+            //手动实现callback
+            console.log(resp);
+            if (resp.result === "success") {
+                //同web操作
+                outer.username = resp.username;
+                outer.photo = resp.photo;
+                outer.hide();
+                outer.root.menu.show();
+            }//acwing没有提供用户拒绝后的api，所以用户拒绝后会比较尴尬，直接卡住
         });
     }
 
@@ -744,7 +765,7 @@ class Settings {
         this.$login.show();
     }
 
-    getinfo() {
+    getinfo_web() {
         //获取用户信息
         let outer = this;
 
@@ -768,6 +789,20 @@ class Settings {
                 }
             }
         })
+    }
+
+    getinfo_acapp() {
+        let outer = this;
+        $.ajax({
+            url: "https://app6534.acapp.acwing.com.cn/settings/acwing/acapp/apply_code/",
+            type: "GET",
+            success: function (resp) {
+                if (resp.result === "success") {
+                    //根据acwing的api传参即可
+                    outer.third_part_login_acapp(resp.appid, resp.redirect_uri, resp.scope, resp.state);
+                }
+            }
+        });
     }
 
     hide() {
