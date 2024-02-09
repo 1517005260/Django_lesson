@@ -43,23 +43,14 @@ class GamePlayground {
             this.game_map.resize();
     }
 
-    show() {
+    show(mode) {
+        let outer = this;
         this.$playground.show();
 
-        this.resize();  //随视窗要变化
-
         this.game_map = new GameMap(this);
+        this.resize();  //要在地图创建之后resize
 
-        this.players = [];  //添加5个机器人和自己
-        for (let i = 0; i < 5; i++)
-            this.players.push(new Player(this, {
-                x: this.width / 2 / this.scale,
-                y: 0.5,  //即this.height/2/this.scale , this.height = this.scale
-                radius: 0.05,
-                color: this.get_random_color(),
-                speed: 0.15,
-                is_me: false,
-            }));
+        this.players = [];  //添加玩家
 
         this.players.push(new Player(this, {
             x: this.width / 2 / this.scale,
@@ -67,8 +58,28 @@ class GamePlayground {
             radius: 0.05,
             color: 'white',
             speed: 0.15,
-            is_me: true,
+            character: "me",
+            username: this.root.settings.username,
+            photo: this.root.settings.photo
         }));
+
+        if (mode === "single mode") {
+            for (let i = 0; i < 5; i++)
+                this.players.push(new Player(this, {
+                    x: this.width / 2 / this.scale,
+                    y: 0.5,  //即this.height/2/this.scale , this.height = this.scale
+                    radius: 0.05,
+                    color: this.get_random_color(),
+                    speed: 0.15,
+                    character: "robot",
+                    //机器人不要头像和名字
+                }));
+        } else if (mode === "multi mode") {
+            this.mps = new MultiPlayerSocket(this);  //简称mps
+            this.mps.ws.onopen = function () {   //当连接创建成功后激发回调函数
+                outer.mps.send_create_player();
+            };
+        }
     }
 
     hide() {

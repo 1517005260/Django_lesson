@@ -37,10 +37,11 @@ class GameMenu {
 
         this.$single_mode.on('click', function () {
             outer.hide();
-            outer.root.playground.show();
+            outer.root.playground.show("single mode");
         });
         this.$multi_mode.on('click', function () {
-            console.log('click multi mode');
+            outer.hide();
+            outer.root.playground.show("multi mode");
         });
         this.$settings.on('click', function () {
             outer.root.settings.sign_out();
@@ -187,7 +188,9 @@ class Particle extends GameObject {
         this.speed = info.speed; //速度，速度乘以上面的方向就是分速度
         this.radius = info.radius;
         this.color = info.color;
-        this.is_me = info.is_me;  //判定当前玩家是不是自己
+        this.character = info.character;  //判定当前玩家身份
+        this.username = info.username;
+        this.photo = info.photo;
         this.move_length = 0;  //移动向量的长度
 
         this.eps = 0.01;  //浮点数小于这个值判0;
@@ -200,20 +203,20 @@ class Particle extends GameObject {
         this.damage_vy = 0;
         this.damage_speed = 0;
 
-        if (this.is_me) {
+        if (this.character !== "robot") {
             //canvas用图片填充图形
             this.img = new Image();
-            this.img.src = this.root.root.settings.photo;
+            this.img.src = this.photo;
         }
     }
 
     start() {
-        if (this.is_me) {
+        if (this.character === "me") {
             //自己的操作逻辑由自己定
             //别人的操作逻辑是通过后端发送出来的
             //ai的操作逻辑由我们的代码决定
             this.events();
-        } else {
+        } else if (this.character === "robot") {
             //实现ai的随机走动
             //Math.random() 属于 [0,1]
             let target_x = Math.random() * this.root.width / this.root.scale;
@@ -329,7 +332,7 @@ class Particle extends GameObject {
         this.spent_time += this.timedelta / 1000;
         //加入人机对战时前4秒ai不会攻击的机制
         //加入人机对战时ai每3秒放一次技能的机制
-        if (!this.is_me && this.spent_time > 4 && Math.random() < 1 / 180.0) {
+        if (this.character === "robot" && this.spent_time > 4 && Math.random() < 1 / 120.0) {
             //随机取出一名玩家
             let player = this.root.players[Math.floor(Math.random() * this.root.players.length)];
             //并加入预判机制
@@ -349,7 +352,7 @@ class Particle extends GameObject {
             if (this.move_length < this.eps) {
                 this.move_length = 0;
                 this.vx = this.vy = 0;
-                if (!this.is_me) {
+                if (this.character === "robot") {
                     let target_x = Math.random() * this.root.width / this.root.scale;
                     let target_y = Math.random() * this.root.height / this.root.scale;
                     this.move_to(target_x, target_y);
@@ -368,7 +371,7 @@ class Particle extends GameObject {
 
     render() {
         let scale = this.root.scale;
-        if (this.is_me) {
+        if (this.character !== "robot") {
             //渲染头像的canvas api
             this.ctx.save();
             this.ctx.beginPath();
@@ -463,6 +466,23 @@ class FireBall extends GameObject {
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
+}class MultiPlayerSocket {
+    constructor(root) {
+        this.root = root;
+        this.ws = new WebSocket("wss://app6534.acapp.acwing.com.cn/wss/multiplayer/");  //客户端和服务器端建立连接，名称和路由一致
+        this.start();
+    }
+    start() { }
+
+    send_create_player() {
+        this.ws.send(JSON.stringify({   //将json转换成字符串
+            'message': "created player",
+        }));
+    }
+
+    receive_create_player() {
+
+    }
 }class GamePlayground {
     constructor(root) {
         this.root = root;
@@ -508,23 +528,14 @@ class FireBall extends GameObject {
             this.game_map.resize();
     }
 
-    show() {
+    show(mode) {
+        let outer = this;
         this.$playground.show();
 
-        this.resize();  //随视窗要变化
-
         this.game_map = new GameMap(this);
+        this.resize();  //要在地图创建之后resize
 
-        this.players = [];  //添加5个机器人和自己
-        for (let i = 0; i < 5; i++)
-            this.players.push(new Player(this, {
-                x: this.width / 2 / this.scale,
-                y: 0.5,  //即this.height/2/this.scale , this.height = this.scale
-                radius: 0.05,
-                color: this.get_random_color(),
-                speed: 0.15,
-                is_me: false,
-            }));
+        this.players = [];  //添加玩家
 
         this.players.push(new Player(this, {
             x: this.width / 2 / this.scale,
@@ -532,8 +543,28 @@ class FireBall extends GameObject {
             radius: 0.05,
             color: 'white',
             speed: 0.15,
-            is_me: true,
+            character: "me",
+            username: this.root.settings.username,
+            photo: this.root.settings.photo
         }));
+
+        if (mode === "single mode") {
+            for (let i = 0; i < 5; i++)
+                this.players.push(new Player(this, {
+                    x: this.width / 2 / this.scale,
+                    y: 0.5,  //即this.height/2/this.scale , this.height = this.scale
+                    radius: 0.05,
+                    color: this.get_random_color(),
+                    speed: 0.15,
+                    character: "robot",
+                    //机器人不要头像和名字
+                }));
+        } else if (mode === "multi mode") {
+            this.mps = new MultiPlayerSocket(this);  //简称mps
+            this.mps.ws.onopen = function () {   //当连接创建成功后激发回调函数
+                outer.mps.send_create_player();
+            };
+        }
     }
 
     hide() {

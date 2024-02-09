@@ -11,7 +11,9 @@ class Player extends GameObject {
         this.speed = info.speed; //速度，速度乘以上面的方向就是分速度
         this.radius = info.radius;
         this.color = info.color;
-        this.is_me = info.is_me;  //判定当前玩家是不是自己
+        this.character = info.character;  //判定当前玩家身份
+        this.username = info.username;
+        this.photo = info.photo;
         this.move_length = 0;  //移动向量的长度
 
         this.eps = 0.01;  //浮点数小于这个值判0;
@@ -24,20 +26,20 @@ class Player extends GameObject {
         this.damage_vy = 0;
         this.damage_speed = 0;
 
-        if (this.is_me) {
+        if (this.character !== "robot") {
             //canvas用图片填充图形
             this.img = new Image();
-            this.img.src = this.root.root.settings.photo;
+            this.img.src = this.photo;
         }
     }
 
     start() {
-        if (this.is_me) {
+        if (this.character === "me") {
             //自己的操作逻辑由自己定
             //别人的操作逻辑是通过后端发送出来的
             //ai的操作逻辑由我们的代码决定
             this.events();
-        } else {
+        } else if (this.character === "robot") {
             //实现ai的随机走动
             //Math.random() 属于 [0,1]
             let target_x = Math.random() * this.root.width / this.root.scale;
@@ -153,7 +155,7 @@ class Player extends GameObject {
         this.spent_time += this.timedelta / 1000;
         //加入人机对战时前4秒ai不会攻击的机制
         //加入人机对战时ai每3秒放一次技能的机制
-        if (!this.is_me && this.spent_time > 4 && Math.random() < 1 / 180.0) {
+        if (this.character === "robot" && this.spent_time > 4 && Math.random() < 1 / 120.0) {
             //随机取出一名玩家
             let player = this.root.players[Math.floor(Math.random() * this.root.players.length)];
             //并加入预判机制
@@ -173,7 +175,7 @@ class Player extends GameObject {
             if (this.move_length < this.eps) {
                 this.move_length = 0;
                 this.vx = this.vy = 0;
-                if (!this.is_me) {
+                if (this.character === "robot") {
                     let target_x = Math.random() * this.root.width / this.root.scale;
                     let target_y = Math.random() * this.root.height / this.root.scale;
                     this.move_to(target_x, target_y);
@@ -192,7 +194,7 @@ class Player extends GameObject {
 
     render() {
         let scale = this.root.scale;
-        if (this.is_me) {
+        if (this.character !== "robot") {
             //渲染头像的canvas api
             this.ctx.save();
             this.ctx.beginPath();
