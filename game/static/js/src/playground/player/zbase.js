@@ -14,7 +14,7 @@ class Player extends GameObject {
         this.is_me = info.is_me;  //判定当前玩家是不是自己
         this.move_length = 0;  //移动向量的长度
 
-        this.eps = 0.1;  //浮点数小于这个值判0;
+        this.eps = 0.01;  //浮点数小于这个值判0;
 
         this.cur_skill = null;  //当前选中的技能
         this.spent_time = 0;  //当前角色进入游戏后经过的时间
@@ -40,8 +40,8 @@ class Player extends GameObject {
         } else {
             //实现ai的随机走动
             //Math.random() 属于 [0,1]
-            let target_x = Math.random() * this.root.width;
-            let target_y = Math.random() * this.root.height;
+            let target_x = Math.random() * this.root.width / this.root.scale;
+            let target_y = Math.random() * this.root.height / this.root.scale;
             this.move_to(target_x, target_y);
         }
     }
@@ -63,12 +63,12 @@ class Player extends GameObject {
             if (e.which === 1) //左键指定技能方向
             {
                 if (outer.cur_skill === "fireball")
-                    outer.shoot_fireball(e.clientX - rect.left, e.clientY - rect.top);  //e.clientX, e.clientY就是事件mousedown的位置
+                    outer.shoot_fireball((e.clientX - rect.left) / outer.root.scale, (e.clientY - rect.top) / outer.root.scale);  //e.clientX, e.clientY就是事件mousedown的位置
                 outer.cur_skill = null;
             } else if (e.which === 2) {
                 return false;  //禁用鼠标滚轮
             } else if (e.which === 3) {
-                outer.move_to(e.clientX - rect.left, e.clientY - rect.top);
+                outer.move_to((e.clientX - rect.left) / outer.root.scale, (e.clientY - rect.top) / outer.root.scale);
             }
         });
 
@@ -88,13 +88,13 @@ class Player extends GameObject {
             player: this,
             x: this.x,
             y: this.y,
-            radius: this.root.height * 0.01,  //火球半径
+            radius: 0.01,  //火球半径
             vx: Math.cos(sita),
             vy: Math.sin(sita),
             color: 'orange',   //火球是橙色的
-            speed: this.root.height * 0.5,
-            move_length: this.root.height * 1, //射程
-            damage: this.root.height * 0.01,   //血量表现为球的大小，受击后减去damage半径
+            speed: 0.5,
+            move_length: 1, //射程
+            damage: 0.01,   //血量表现为球的大小，受击后减去damage半径
         });
     }
 
@@ -131,7 +131,7 @@ class Player extends GameObject {
         this.radius -= damage;
 
         //死亡判定
-        if (this.radius < 10) {
+        if (this.radius < this.eps) {
             this.destroy();
             return false;
         }
@@ -145,6 +145,11 @@ class Player extends GameObject {
     }
 
     update() {
+        this.update_move();
+        this.render();
+    }
+
+    update_move() {
         this.spent_time += this.timedelta / 1000;
         //加入人机对战时前4秒ai不会攻击的机制
         //加入人机对战时ai每3秒放一次技能的机制
@@ -158,7 +163,7 @@ class Player extends GameObject {
         }
 
         //受击后的作用力
-        if (this.damage_speed > 10) {
+        if (this.damage_speed > this.eps) {
             this.vx = this.vy = 0;
             this.move_length = 0;
             this.x += this.damage_vx * this.damage_speed * this.timedelta / 1000;
@@ -169,8 +174,8 @@ class Player extends GameObject {
                 this.move_length = 0;
                 this.vx = this.vy = 0;
                 if (!this.is_me) {
-                    let target_x = Math.random() * this.root.width;
-                    let target_y = Math.random() * this.root.height;
+                    let target_x = Math.random() * this.root.width / this.root.scale;
+                    let target_y = Math.random() * this.root.height / this.root.scale;
                     this.move_to(target_x, target_y);
                 }
             } else {
@@ -183,23 +188,23 @@ class Player extends GameObject {
             }
         }
 
-        this.render();
     }
 
     render() {
+        let scale = this.root.scale;
         if (this.is_me) {
             //渲染头像的canvas api
             this.ctx.save();
             this.ctx.beginPath();
-            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
             this.ctx.stroke();
             this.ctx.clip();
-            this.ctx.drawImage(this.img, this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
+            this.ctx.drawImage(this.img, (this.x - this.radius) * scale, (this.y - this.radius) * scale, this.radius * 2 * scale, this.radius * 2 * scale);
             this.ctx.restore();
         } else {
             //人机画纯色圆
             this.ctx.beginPath();
-            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
             this.ctx.fillStyle = this.color;
             this.ctx.fill();
         }

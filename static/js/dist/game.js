@@ -112,6 +112,15 @@ requestAnimationFrame(Game_Animation);class GameMap extends GameObject {
     }
     start() { }
 
+    resize() {
+        //每次视窗变化时都要渲染一下，防止地图出现颜色缓慢渐变
+        this.ctx.canvas.width = this.root.width;
+        this.ctx.canvas.height = this.root.height;
+        //每次resize都要重新获取，否则地图大小上限就不会变了
+        this.ctx.fillStyle = "rgba(0,0,0,1)";
+        this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+    }
+
     update() {
         this.render();
     }
@@ -137,7 +146,7 @@ class Particle extends GameObject {
         this.move_length = info.move_length;
 
         this.f = 0.9;
-        this.eps = 1;
+        this.eps = 0.01;
 
         this.start();
     }
@@ -159,8 +168,9 @@ class Particle extends GameObject {
     }
 
     render() {
+        let scale = this.root.scale;
         this.ctx.beginPath();
-        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+        this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
@@ -180,7 +190,7 @@ class Particle extends GameObject {
         this.is_me = info.is_me;  //判定当前玩家是不是自己
         this.move_length = 0;  //移动向量的长度
 
-        this.eps = 0.1;  //浮点数小于这个值判0;
+        this.eps = 0.01;  //浮点数小于这个值判0;
 
         this.cur_skill = null;  //当前选中的技能
         this.spent_time = 0;  //当前角色进入游戏后经过的时间
@@ -206,8 +216,8 @@ class Particle extends GameObject {
         } else {
             //实现ai的随机走动
             //Math.random() 属于 [0,1]
-            let target_x = Math.random() * this.root.width;
-            let target_y = Math.random() * this.root.height;
+            let target_x = Math.random() * this.root.width / this.root.scale;
+            let target_y = Math.random() * this.root.height / this.root.scale;
             this.move_to(target_x, target_y);
         }
     }
@@ -229,12 +239,12 @@ class Particle extends GameObject {
             if (e.which === 1) //左键指定技能方向
             {
                 if (outer.cur_skill === "fireball")
-                    outer.shoot_fireball(e.clientX - rect.left, e.clientY - rect.top);  //e.clientX, e.clientY就是事件mousedown的位置
+                    outer.shoot_fireball((e.clientX - rect.left) / outer.root.scale, (e.clientY - rect.top) / outer.root.scale);  //e.clientX, e.clientY就是事件mousedown的位置
                 outer.cur_skill = null;
             } else if (e.which === 2) {
                 return false;  //禁用鼠标滚轮
             } else if (e.which === 3) {
-                outer.move_to(e.clientX - rect.left, e.clientY - rect.top);
+                outer.move_to((e.clientX - rect.left) / outer.root.scale, (e.clientY - rect.top) / outer.root.scale);
             }
         });
 
@@ -254,13 +264,13 @@ class Particle extends GameObject {
             player: this,
             x: this.x,
             y: this.y,
-            radius: this.root.height * 0.01,  //火球半径
+            radius: 0.01,  //火球半径
             vx: Math.cos(sita),
             vy: Math.sin(sita),
             color: 'orange',   //火球是橙色的
-            speed: this.root.height * 0.5,
-            move_length: this.root.height * 1, //射程
-            damage: this.root.height * 0.01,   //血量表现为球的大小，受击后减去damage半径
+            speed: 0.5,
+            move_length: 1, //射程
+            damage: 0.01,   //血量表现为球的大小，受击后减去damage半径
         });
     }
 
@@ -297,7 +307,7 @@ class Particle extends GameObject {
         this.radius -= damage;
 
         //死亡判定
-        if (this.radius < 10) {
+        if (this.radius < this.eps) {
             this.destroy();
             return false;
         }
@@ -311,6 +321,11 @@ class Particle extends GameObject {
     }
 
     update() {
+        this.update_move();
+        this.render();
+    }
+
+    update_move() {
         this.spent_time += this.timedelta / 1000;
         //加入人机对战时前4秒ai不会攻击的机制
         //加入人机对战时ai每3秒放一次技能的机制
@@ -324,7 +339,7 @@ class Particle extends GameObject {
         }
 
         //受击后的作用力
-        if (this.damage_speed > 10) {
+        if (this.damage_speed > this.eps) {
             this.vx = this.vy = 0;
             this.move_length = 0;
             this.x += this.damage_vx * this.damage_speed * this.timedelta / 1000;
@@ -335,8 +350,8 @@ class Particle extends GameObject {
                 this.move_length = 0;
                 this.vx = this.vy = 0;
                 if (!this.is_me) {
-                    let target_x = Math.random() * this.root.width;
-                    let target_y = Math.random() * this.root.height;
+                    let target_x = Math.random() * this.root.width / this.root.scale;
+                    let target_y = Math.random() * this.root.height / this.root.scale;
                     this.move_to(target_x, target_y);
                 }
             } else {
@@ -349,23 +364,23 @@ class Particle extends GameObject {
             }
         }
 
-        this.render();
     }
 
     render() {
+        let scale = this.root.scale;
         if (this.is_me) {
             //渲染头像的canvas api
             this.ctx.save();
             this.ctx.beginPath();
-            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
             this.ctx.stroke();
             this.ctx.clip();
-            this.ctx.drawImage(this.img, this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
+            this.ctx.drawImage(this.img, (this.x - this.radius) * scale, (this.y - this.radius) * scale, this.radius * 2 * scale, this.radius * 2 * scale);
             this.ctx.restore();
         } else {
             //人机画纯色圆
             this.ctx.beginPath();
-            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
             this.ctx.fillStyle = this.color;
             this.ctx.fill();
         }
@@ -397,7 +412,7 @@ class FireBall extends GameObject {
         this.move_length = info.move_length;
         this.damage = info.damage;
 
-        this.eps = 0.1;
+        this.eps = 0.01;
 
         this.start();
     }
@@ -442,8 +457,9 @@ class FireBall extends GameObject {
     }
 
     render() {
+        let scale = this.root.scale;
         this.ctx.beginPath();
-        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+        this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
@@ -453,6 +469,9 @@ class FireBall extends GameObject {
         this.$playground = $(`
         <div class="game-playground"><div>
         `);
+        this.root.$game.append(this.$playground);
+        this.width = this.$playground.width();
+        this.height = this.$playground.height();
 
         this.hide();   //一开始我们在菜单界面，所以要隐藏playground界面
 
@@ -466,35 +485,53 @@ class FireBall extends GameObject {
 
 
     start() {
+        //每次修改窗口大小时都要修改resize函数
+        let outer = this;
+        $(window).resize(function () {
+            outer.resize();
+        });
+    }
 
+    resize() {
+        //动态调整地图的函数
+        this.width = this.$playground.width();
+        this.height = this.$playground.height();
+        //每次resize都要重新获取，否则地图大小上限就不会变了
+        let unit = Math.min(this.width / 16, this.height / 9);
+        this.width = unit * 16;
+        this.height = unit * 9;
+        //16:9
+        this.scale = this.height; //相对变化基准单位
+        //虽然这里scale被定义在方法里，但是本实例可以作为root访问到scale
+
+        if (this.game_map)
+            this.game_map.resize();
     }
 
     show() {
         this.$playground.show();
 
-        this.root.$game.append(this.$playground);
-        this.width = this.$playground.width();
-        this.height = this.$playground.height();
+        this.resize();  //随视窗要变化
 
         this.game_map = new GameMap(this);
 
         this.players = [];  //添加5个机器人和自己
         for (let i = 0; i < 5; i++)
             this.players.push(new Player(this, {
-                x: this.width / 2,
-                y: this.height / 2,
-                radius: this.height * 0.05,
+                x: this.width / 2 / this.scale,
+                y: 0.5,  //即this.height/2/this.scale , this.height = this.scale
+                radius: 0.05,
                 color: this.get_random_color(),
-                speed: this.height * 0.15,
+                speed: 0.15,
                 is_me: false,
             }));
 
         this.players.push(new Player(this, {
-            x: this.width / 2,
-            y: this.height / 2,
-            radius: this.height * 0.05,
+            x: this.width / 2 / this.scale,
+            y: 0.5,
+            radius: 0.05,
             color: 'white',
-            speed: this.height * 0.15,
+            speed: 0.15,
             is_me: true,
         }));
     }
