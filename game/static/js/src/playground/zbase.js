@@ -44,6 +44,7 @@ class GamePlayground {
     }
 
     show(mode) {
+        this.mode = mode;   //记得保存mode类型，用于后续player广播判断
         let outer = this;
         this.$playground.show();
 

@@ -72,7 +72,12 @@ class Player extends GameObject {
             } else if (e.which === 2) {
                 return false;  //禁用鼠标滚轮
             } else if (e.which === 3) {
-                outer.move_to((e.clientX - rect.left) / outer.root.scale, (e.clientY - rect.top) / outer.root.scale);
+                let tx = (e.clientX - rect.left) / outer.root.scale;
+                let ty = (e.clientY - rect.top) / outer.root.scale;
+                outer.move_to(tx, ty);
+
+                if(outer.root.mode==="multi mode")
+                    outer.root.mps.send_move_to(tx,ty);
             }
         });
 

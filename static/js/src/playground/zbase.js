@@ -44,6 +44,7 @@ class GamePlayground {
     }
 
     show(mode) {
+        this.mode = mode;
         let outer = this;
         this.$playground.show();
 

@@ -150,7 +150,6 @@ class Settings {
             url: "https://app6534.acapp.acwing.com.cn/settings/acwing/web/apply_code/",
             type: "GET",
             success: function (resp) {
-                console.log(resp);
                 if (resp.result === "success") {
                     window.location.replace(resp.apply_code_url);
                     //窗口刷新，并重定向到 apply_code_url
@@ -164,7 +163,6 @@ class Settings {
 
         this.root.os.api.oauth2.authorize(appid, redirect_uri, scope, state, function (resp) {
             //手动实现callback
-            console.log(resp);
             if (resp.result === "success") {
                 //同web操作
                 outer.username = resp.username;
@@ -190,7 +188,6 @@ class Settings {
                 password: password,
             },
             success: function (resp) {
-                console.log(resp);
                 if (resp.result === "success")
                     location.reload();
                 //刷新界面。机制：登录成功后重新刷新页面，再次访问网站时，getinfo函数会判定用户已经登录，所以会转至菜单页
@@ -218,7 +215,6 @@ class Settings {
                 password_confirm: password_confirm,
             },
             success: function (resp) {
-                console.log(resp);
                 if (resp.result === "success") {
                     location.reload();
                 } else {
@@ -230,22 +226,21 @@ class Settings {
     }
 
     sign_out() {
-        if (this.platform === "ACAPP") return false;
-        //acapp不用登出，用户直接叉掉网页即可
-
-        $.ajax({
-            url: "https://app6534.acapp.acwing.com.cn/settings/logout/",
-            type: "GET",
-            //登出不用传输数据
-            success: function (resp) {
-                console.log(resp);
-                if (resp.result === "success") {
-                    location.reload();
-                    //刷新后getinfo检测到用户未登录，返回到登录界面
+        if (this.platform === "ACAPP") {
+            this.root.os.api.window.close();
+        } else {
+            $.ajax({
+                url: "https://app6534.acapp.acwing.com.cn/settings/logout/",
+                type: "GET",
+                //登出不用传输数据
+                success: function (resp) {
+                    if (resp.result === "success") {
+                        location.reload();
+                        //刷新后getinfo检测到用户未登录，返回到登录界面
+                    }
                 }
-            }
-        });
-
+            });
+        }
     }
 
     register() {
@@ -273,7 +268,6 @@ class Settings {
             },
             success: function (resp) {   //return函数，不要被success名字迷惑。   resp就是JsonResponse
                 //request -> resp(onse)
-                console.log(resp);
                 if (resp.result === "success") {  //登录成功
                     outer.username = resp.username;  //获取信息
                     outer.photo = resp.photo;

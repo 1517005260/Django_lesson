@@ -260,7 +260,12 @@ class Particle extends GameObject {
             } else if (e.which === 2) {
                 return false;  //禁用鼠标滚轮
             } else if (e.which === 3) {
-                outer.move_to((e.clientX - rect.left) / outer.root.scale, (e.clientY - rect.top) / outer.root.scale);
+                let tx = (e.clientX - rect.left) / outer.root.scale;
+                let ty = (e.clientY - rect.top) / outer.root.scale;
+                outer.move_to(tx, ty);
+
+                if(outer.root.mode==="multi mode")
+                    outer.root.mps.send_move_to(tx,ty);
             }
         });
 
@@ -494,6 +499,7 @@ class FireBall extends GameObject {
     receive() {
         //ws协议的双端连接函数
         let outer = this;
+
         this.ws.onmessage = function (e) {  //接收信息
             let data = JSON.parse(e.data);  //将字符串转换成json
             if (data.uuid === outer.uuid)
@@ -501,6 +507,8 @@ class FireBall extends GameObject {
 
             if (data.event === "create_player") {
                 outer.receive_create_player(data.uuid, data.username, data.photo);
+            } else if (data.event === "move_to") {
+                outer.receive_move_to(data.uuid, data.tx, data.ty);
             }
         };
     }
@@ -528,6 +536,34 @@ class FireBall extends GameObject {
         });
         player.uuid = uuid;
         this.root.players.push(player);
+    }
+
+    send_move_to(tx, ty) {
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event': "move_to",
+            'uuid': outer.uuid,
+            'tx': tx,
+            'ty': ty,
+        }));
+    }
+
+    get_player(uuid) {  //找到uuid为指定的player
+        let players = this.root.players;
+        for (let i = 0; i < players.length; i++) {
+            let player = players[i];
+            if (uuid === player.uuid)
+                return player;
+        }
+        return null;
+    }
+
+    receive_move_to(uuid, tx, ty) {
+        let player = this.get_player(uuid);
+        if (player) {
+            //未死亡且未掉线
+            player.move_to(tx, ty);
+        }
     }
 }class GamePlayground {
     constructor(root) {
@@ -575,6 +611,7 @@ class FireBall extends GameObject {
     }
 
     show(mode) {
+        this.mode = mode;
         let outer = this;
         this.$playground.show();
 
@@ -774,7 +811,6 @@ class Settings {
             url: "https://app6534.acapp.acwing.com.cn/settings/acwing/web/apply_code/",
             type: "GET",
             success: function (resp) {
-                console.log(resp);
                 if (resp.result === "success") {
                     window.location.replace(resp.apply_code_url);
                     //窗口刷新，并重定向到 apply_code_url
@@ -788,7 +824,6 @@ class Settings {
 
         this.root.os.api.oauth2.authorize(appid, redirect_uri, scope, state, function (resp) {
             //手动实现callback
-            console.log(resp);
             if (resp.result === "success") {
                 //同web操作
                 outer.username = resp.username;
@@ -814,7 +849,6 @@ class Settings {
                 password: password,
             },
             success: function (resp) {
-                console.log(resp);
                 if (resp.result === "success")
                     location.reload();
                 //刷新界面。机制：登录成功后重新刷新页面，再次访问网站时，getinfo函数会判定用户已经登录，所以会转至菜单页
@@ -842,7 +876,6 @@ class Settings {
                 password_confirm: password_confirm,
             },
             success: function (resp) {
-                console.log(resp);
                 if (resp.result === "success") {
                     location.reload();
                 } else {
@@ -854,22 +887,21 @@ class Settings {
     }
 
     sign_out() {
-        if (this.platform === "ACAPP") return false;
-        //acapp不用登出，用户直接叉掉网页即可
-
-        $.ajax({
-            url: "https://app6534.acapp.acwing.com.cn/settings/logout/",
-            type: "GET",
-            //登出不用传输数据
-            success: function (resp) {
-                console.log(resp);
-                if (resp.result === "success") {
-                    location.reload();
-                    //刷新后getinfo检测到用户未登录，返回到登录界面
+        if (this.platform === "ACAPP") {
+            this.root.os.api.window.close();
+        } else {
+            $.ajax({
+                url: "https://app6534.acapp.acwing.com.cn/settings/logout/",
+                type: "GET",
+                //登出不用传输数据
+                success: function (resp) {
+                    if (resp.result === "success") {
+                        location.reload();
+                        //刷新后getinfo检测到用户未登录，返回到登录界面
+                    }
                 }
-            }
-        });
-
+            });
+        }
     }
 
     register() {
@@ -897,7 +929,6 @@ class Settings {
             },
             success: function (resp) {   //return函数，不要被success名字迷惑。   resp就是JsonResponse
                 //request -> resp(onse)
-                console.log(resp);
                 if (resp.result === "success") {  //登录成功
                     outer.username = resp.username;  //获取信息
                     outer.photo = resp.photo;
