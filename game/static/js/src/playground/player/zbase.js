@@ -26,6 +26,8 @@ class Player extends GameObject {
         this.damage_vy = 0;
         this.damage_speed = 0;
 
+        this.fireballs = [];
+
         this.status = "live";
 
         if (this.character !== "robot") {
@@ -66,9 +68,16 @@ class Player extends GameObject {
             //1左键 2滚轮 3右键
             if (e.which === 1) //左键指定技能方向
             {
-                if (outer.cur_skill === "fireball")
-                    outer.shoot_fireball((e.clientX - rect.left) / outer.root.scale, (e.clientY - rect.top) / outer.root.scale);  //e.clientX, e.clientY就是事件mousedown的位置
+                let tx = (e.clientX - rect.left) / outer.root.scale;//e.clientX, e.clientY就是事件mousedown的位置
+                let ty = (e.clientY - rect.top) / outer.root.scale
+                if (outer.cur_skill === "fireball") {
+                    let fireball = outer.shoot_fireball(tx, ty);
+                    if (outer.root.mode === "multi mode")
+                        outer.root.mps.send_shoot_fireball(tx, ty, fireball.uuid);
+                }
+
                 outer.cur_skill = null;
+
             } else if (e.which === 2) {
                 return false;  //禁用鼠标滚轮
             } else if (e.which === 3) {
@@ -76,8 +85,8 @@ class Player extends GameObject {
                 let ty = (e.clientY - rect.top) / outer.root.scale;
                 outer.move_to(tx, ty);
 
-                if(outer.root.mode==="multi mode")
-                    outer.root.mps.send_move_to(tx,ty);
+                if (outer.root.mode === "multi mode")
+                    outer.root.mps.send_move_to(tx, ty);
             }
         });
 
@@ -94,7 +103,7 @@ class Player extends GameObject {
     shoot_fireball(target_x, target_y) {  //发射火球，传入终点坐标
         if (this.status === "die") return false;
         let sita = Math.atan2(target_y - this.y, target_x - this.x);  //发射角度
-        new FireBall(this.root, {
+        let fireball = new FireBall(this.root, {
             player: this,
             x: this.x,
             y: this.y,
@@ -106,6 +115,18 @@ class Player extends GameObject {
             move_length: 1, //射程
             damage: 0.01,   //血量表现为球的大小，受击后减去damage半径
         });
+        this.fireballs.push(fireball);
+        return fireball; //需要获取这个火球的uuid
+    }
+
+    destroy_fireball(uuid) {
+        for (let i = 0; i < this.fireballs.length; i++) {
+            let fireball = this.fireballs[i];
+            if (uuid === fireball.uuid) {
+                fireball.destroy();
+                break;
+            }
+        }
     }
 
     get_dist(x1, y1, x2, y2) {

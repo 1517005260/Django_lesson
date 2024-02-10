@@ -81,7 +81,7 @@ class GameObject {
 
     update() { }
 
-    on_destroy() { }  //在这个对象被销毁前执行一次
+    on_destroy() { }  //在这个对象被销毁前执行一次  目的：删干净
 
     destroy() {
         this.on_destroy();
@@ -214,6 +214,8 @@ class Particle extends GameObject {
         this.damage_vy = 0;
         this.damage_speed = 0;
 
+        this.fireballs = [];
+
         this.status = "live";
 
         if (this.character !== "robot") {
@@ -254,9 +256,16 @@ class Particle extends GameObject {
             //1左键 2滚轮 3右键
             if (e.which === 1) //左键指定技能方向
             {
-                if (outer.cur_skill === "fireball")
-                    outer.shoot_fireball((e.clientX - rect.left) / outer.root.scale, (e.clientY - rect.top) / outer.root.scale);  //e.clientX, e.clientY就是事件mousedown的位置
+                let tx = (e.clientX - rect.left) / outer.root.scale;//e.clientX, e.clientY就是事件mousedown的位置
+                let ty = (e.clientY - rect.top) / outer.root.scale
+                if (outer.cur_skill === "fireball") {
+                    let fireball = outer.shoot_fireball(tx, ty);
+                    if (outer.root.mode === "multi mode")
+                        outer.root.mps.send_shoot_fireball(tx, ty, fireball.uuid);
+                }
+
                 outer.cur_skill = null;
+
             } else if (e.which === 2) {
                 return false;  //禁用鼠标滚轮
             } else if (e.which === 3) {
@@ -264,8 +273,8 @@ class Particle extends GameObject {
                 let ty = (e.clientY - rect.top) / outer.root.scale;
                 outer.move_to(tx, ty);
 
-                if(outer.root.mode==="multi mode")
-                    outer.root.mps.send_move_to(tx,ty);
+                if (outer.root.mode === "multi mode")
+                    outer.root.mps.send_move_to(tx, ty);
             }
         });
 
@@ -282,7 +291,7 @@ class Particle extends GameObject {
     shoot_fireball(target_x, target_y) {  //发射火球，传入终点坐标
         if (this.status === "die") return false;
         let sita = Math.atan2(target_y - this.y, target_x - this.x);  //发射角度
-        new FireBall(this.root, {
+        let fireball = new FireBall(this.root, {
             player: this,
             x: this.x,
             y: this.y,
@@ -294,6 +303,18 @@ class Particle extends GameObject {
             move_length: 1, //射程
             damage: 0.01,   //血量表现为球的大小，受击后减去damage半径
         });
+        this.fireballs.push(fireball);
+        return fireball; //需要获取这个火球的uuid
+    }
+
+    destroy_fireball(uuid) {
+        for (let i = 0; i < this.fireballs.length; i++) {
+            let fireball = this.fireballs[i];
+            if (uuid === fireball.uuid) {
+                fireball.destroy();
+                break;
+            }
+        }
     }
 
     get_dist(x1, y1, x2, y2) {
@@ -448,18 +469,27 @@ class FireBall extends GameObject {
             return false;
         }
 
+        this.update_move();
+        this.update_attack();
+        this.render();
+    }
+
+    update_move() {
         let move_dist = Math.min(this.move_length, this.speed * this.timedelta / 1000);
         this.x += this.vx * move_dist;
         this.y += this.vy * move_dist;
         this.move_length -= move_dist;
+    }
 
+    update_attack() {
         for (let i = 0; i < this.root.players.length; i++) {
             let player = this.root.players[i];
             if (this.player != player && this.is_collision(player))  //不能攻击自己&&火球和对方碰撞
+            {
                 this.attack(player);
+                break;  //解决一个火球可以攻击好几个玩家的问题
+            }
         }
-
-        this.render();
     }
 
     get_dist(x1, y1, x2, y2) {
@@ -486,12 +516,34 @@ class FireBall extends GameObject {
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
+
+    on_destroy() {
+        let fireballs = this.player.fireballs;
+        for (let i = 0; i < fireballs.length; i++) {
+            if (this === fireballs[i]) {
+                fireballs.splice(i, 1);
+                break;
+            }
+        }
+    }
 }class MultiPlayerSocket {
     constructor(root) {
         this.root = root;
         this.ws = new WebSocket("wss://app6534.acapp.acwing.com.cn/wss/multiplayer/");  //客户端和服务器端建立连接请求，名称和路由一致
         this.start();
     }
+
+    get_player(uuid) {  //找到uuid为指定的player
+        let players = this.root.players;
+        for (let i = 0; i < players.length; i++) {
+            let player = players[i];
+            if (uuid === player.uuid)
+                return player;
+        }
+        return null;
+    }
+
+
     start() {
         this.receive();
     }
@@ -509,6 +561,8 @@ class FireBall extends GameObject {
                 outer.receive_create_player(data.uuid, data.username, data.photo);
             } else if (data.event === "move_to") {
                 outer.receive_move_to(data.uuid, data.tx, data.ty);
+            } else if (data.event === "shoot_fireball") {
+                outer.receive_shoot_fireball(data.uuid, data.tx, data.ty, data.ball_uuid);
             }
         };
     }
@@ -548,21 +602,30 @@ class FireBall extends GameObject {
         }));
     }
 
-    get_player(uuid) {  //找到uuid为指定的player
-        let players = this.root.players;
-        for (let i = 0; i < players.length; i++) {
-            let player = players[i];
-            if (uuid === player.uuid)
-                return player;
-        }
-        return null;
-    }
-
     receive_move_to(uuid, tx, ty) {
         let player = this.get_player(uuid);
         if (player) {
             //未死亡且未掉线
             player.move_to(tx, ty);
+        }
+    }
+
+    send_shoot_fireball(tx, ty, ball_uuid) {
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event': "shoot_fireball",
+            'uuid': outer.uuid,   //谁发射的
+            'tx': tx,
+            'ty': ty,
+            'ball_uuid': ball_uuid,  //哪个火球
+        }));
+    }
+
+    receive_shoot_fireball(uuid, tx, ty, ball_uuid) {
+        let player = this.get_player(uuid);
+        if (player) {
+            let fireball = player.shoot_fireball(tx, ty);
+            fireball.uuid = ball_uuid; //所有视窗中的ball_uuid应该统一
         }
     }
 }class GamePlayground {
@@ -611,7 +674,7 @@ class FireBall extends GameObject {
     }
 
     show(mode) {
-        this.mode = mode;
+        this.mode = mode;   //记得保存mode类型，用于后续player广播判断
         let outer = this;
         this.$playground.show();
 

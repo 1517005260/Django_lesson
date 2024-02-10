@@ -29,18 +29,27 @@ class FireBall extends GameObject {
             return false;
         }
 
+        this.update_move();
+        this.update_attack();
+        this.render();
+    }
+
+    update_move() {
         let move_dist = Math.min(this.move_length, this.speed * this.timedelta / 1000);
         this.x += this.vx * move_dist;
         this.y += this.vy * move_dist;
         this.move_length -= move_dist;
+    }
 
+    update_attack() {
         for (let i = 0; i < this.root.players.length; i++) {
             let player = this.root.players[i];
             if (this.player != player && this.is_collision(player))  //不能攻击自己&&火球和对方碰撞
+            {
                 this.attack(player);
+                break;  //解决一个火球可以攻击好几个玩家的问题
+            }
         }
-
-        this.render();
     }
 
     get_dist(x1, y1, x2, y2) {
@@ -66,5 +75,15 @@ class FireBall extends GameObject {
         this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
+    }
+
+    on_destroy() {
+        let fireballs = this.player.fireballs;
+        for (let i = 0; i < fireballs.length; i++) {
+            if (this === fireballs[i]) {
+                fireballs.splice(i, 1);
+                break;
+            }
+        }
     }
 }

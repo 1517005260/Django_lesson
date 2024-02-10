@@ -23,7 +23,7 @@ class GameObject {
 
     update() { }
 
-    on_destroy() { }  //在这个对象被销毁前执行一次
+    on_destroy() { }  //在这个对象被销毁前执行一次  目的：删干净
 
     destroy() {
         this.on_destroy();

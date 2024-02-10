@@ -4,6 +4,18 @@ class MultiPlayerSocket {
         this.ws = new WebSocket("wss://app6534.acapp.acwing.com.cn/wss/multiplayer/");  //客户端和服务器端建立连接请求，名称和路由一致
         this.start();
     }
+
+    get_player(uuid) {  //找到uuid为指定的player
+        let players = this.root.players;
+        for (let i = 0; i < players.length; i++) {
+            let player = players[i];
+            if (uuid === player.uuid)
+                return player;
+        }
+        return null;
+    }
+
+
     start() {
         this.receive();
     }
@@ -21,6 +33,8 @@ class MultiPlayerSocket {
                 outer.receive_create_player(data.uuid, data.username, data.photo);
             } else if (data.event === "move_to") {
                 outer.receive_move_to(data.uuid, data.tx, data.ty);
+            } else if (data.event === "shoot_fireball") {
+                outer.receive_shoot_fireball(data.uuid, data.tx, data.ty, data.ball_uuid);
             }
         };
     }
@@ -60,21 +74,30 @@ class MultiPlayerSocket {
         }));
     }
 
-    get_player(uuid) {  //找到uuid为指定的player
-        let players = this.root.players;
-        for (let i = 0; i < players.length; i++) {
-            let player = players[i];
-            if (uuid === player.uuid)
-                return player;
-        }
-        return null;
-    }
-
     receive_move_to(uuid, tx, ty) {
         let player = this.get_player(uuid);
         if (player) {
             //未死亡且未掉线
             player.move_to(tx, ty);
+        }
+    }
+
+    send_shoot_fireball(tx, ty, ball_uuid) {
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event': "shoot_fireball",
+            'uuid': outer.uuid,   //谁发射的
+            'tx': tx,
+            'ty': ty,
+            'ball_uuid': ball_uuid,  //哪个火球
+        }));
+    }
+
+    receive_shoot_fireball(uuid, tx, ty, ball_uuid) {
+        let player = this.get_player(uuid);
+        if (player) {
+            let fireball = player.shoot_fireball(tx, ty);
+            fireball.uuid = ball_uuid; //所有视窗中的ball_uuid应该统一
         }
     }
 }
