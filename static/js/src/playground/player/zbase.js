@@ -26,6 +26,8 @@ class Player extends GameObject {
         this.damage_vy = 0;
         this.damage_speed = 0;
 
+        this.status = "live";
+
         if (this.character !== "robot") {
             //canvas用图片填充图形
             this.img = new Image();
@@ -41,7 +43,7 @@ class Player extends GameObject {
             this.events();
         } else if (this.character === "robot") {
             //实现ai的随机走动
-            //Math.random() 属于 [0,1]
+            //Math.random() 属于 [0,1)
             let target_x = Math.random() * this.root.width / this.root.scale;
             let target_y = Math.random() * this.root.height / this.root.scale;
             this.move_to(target_x, target_y);
@@ -85,6 +87,7 @@ class Player extends GameObject {
     }
 
     shoot_fireball(target_x, target_y) {  //发射火球，传入终点坐标
+        if (this.status === "die") return false;
         let sita = Math.atan2(target_y - this.y, target_x - this.x);  //发射角度
         new FireBall(this.root, {
             player: this,
@@ -215,6 +218,7 @@ class Player extends GameObject {
     on_destroy() {
         for (let i = 0; i < this.root.players.length; i++) {
             if (this === this.root.players[i]) {
+                this.status = "die";
                 this.root.players.splice(i, 1);
                 break;
             }

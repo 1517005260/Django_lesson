@@ -1,20 +1,69 @@
-# 以下为官网示例：
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
+from django.conf import settings  #房间人数上限存在settings.py里
+from django.core.cache import cache
+
+# 异步--多函数并发  // 如果没有async声明则默认为同步函数
+# 本程序的例子：在connect中的self.accept()时：connect函数会被阻塞，直到self.accept()执行完毕。但是，其他函数比如receive还在正常运作
+# 如果是同步：那么整个程序都会阻塞在self.accept()这里，不会像异步一样仅connect阻塞
 
 class MultiPlayer(AsyncWebsocketConsumer):
     async def connect(self):  # 创建连接后触发
-        await self.accept()   
-        print('accept')
+        self.room_name = None #一开始没有进入房间
 
-        self.room_name = "room"
+        for i in range(1000):
+            #上限1000个房间
+            name = "room-%d" % (i)
+            if not cache.has_key(name) or len(cache.get(name))<settings.ROOM_CAPACITY:
+                self.room_name = name #如果房间未被创建或者房间人数不满，就把当前实例放到room_name房间里
+                break
+
+        if not self.room_name:  #房间全满，所以未进入房间
+            return
+        
+        await self.accept()   #建立连接
+
+        if not cache.has_key(self.room_name):
+            cache.set(self.room_name,[],3600) #建立空房间，有效期1h
+        
+        for player in cache.get(self.room_name): #向建立连接的web端发送房间内其他玩家信息
+            await self.send(text_data=json.dumps({
+                'event':"create_player",
+                'uuid':player['uuid'],
+                'username':player['username'],
+                'photo':player['photo']
+            }))
         await self.channel_layer.group_add(self.room_name, self.channel_name)  # group即组，可以将许多连接加到一个组里，有群发广播功能
+
+
 
     async def disconnect(self, close_code):   #前端刷新或者关闭后执行，但是不一定靠谱，比如用户断电后就不会向服务器发送任何信息，也就不会执行这个函数
         print('disconnect')
         await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
 
+    async def create_player(self,data):
+        players = cache.get(self.room_name)  #现在房间里有的玩家
+        players.append({
+            'uuid':data['uuid'],
+            'username':data['username'],
+            'photo':data['photo']
+        })
+        cache.set(self.room_name,players,3600)  #重置房间内的玩家信息
+        #广播
+        await self.channel_layer.group_send(self.room_name,{
+            'type':"group_create_player",  #传达的函数
+            'event':"create_player",
+            'uuid':data['uuid'],
+            'username':data['username'],
+            'photo':data['photo'],
+        })
+
+    async def group_create_player(self,data): #与type一致
+        await self.send(text_data=json.dumps(data))
+
     async def receive(self, text_data):  #接收前端的请求
         data = json.loads(text_data)
-        print(data)
+        event = data['event']
+        if event == "create_player":
+            await self.create_player(data)

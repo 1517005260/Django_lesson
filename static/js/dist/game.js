@@ -64,6 +64,17 @@ class GameObject {
 
         this.has_called_start = false;
         this.timedelta = 0;  //这一帧距离上一帧的时间
+        this.uuid = this.create_uuid();
+    }
+
+    create_uuid() {
+        let res = "";
+        //生成随机8位数
+        for (let i = 0; i < 8; i++) {
+            let x = parseInt(Math.floor(Math.random() * 10)); //返回[0,10)
+            res += x;
+        }
+        return res;
     }
 
     start() { }
@@ -203,6 +214,8 @@ class Particle extends GameObject {
         this.damage_vy = 0;
         this.damage_speed = 0;
 
+        this.status = "live";
+
         if (this.character !== "robot") {
             //canvas用图片填充图形
             this.img = new Image();
@@ -218,7 +231,7 @@ class Particle extends GameObject {
             this.events();
         } else if (this.character === "robot") {
             //实现ai的随机走动
-            //Math.random() 属于 [0,1]
+            //Math.random() 属于 [0,1)
             let target_x = Math.random() * this.root.width / this.root.scale;
             let target_y = Math.random() * this.root.height / this.root.scale;
             this.move_to(target_x, target_y);
@@ -262,6 +275,7 @@ class Particle extends GameObject {
     }
 
     shoot_fireball(target_x, target_y) {  //发射火球，传入终点坐标
+        if (this.status === "die") return false;
         let sita = Math.atan2(target_y - this.y, target_x - this.x);  //发射角度
         new FireBall(this.root, {
             player: this,
@@ -392,6 +406,7 @@ class Particle extends GameObject {
     on_destroy() {
         for (let i = 0; i < this.root.players.length; i++) {
             if (this === this.root.players[i]) {
+                this.status = "die";
                 this.root.players.splice(i, 1);
                 break;
             }
@@ -469,19 +484,50 @@ class FireBall extends GameObject {
 }class MultiPlayerSocket {
     constructor(root) {
         this.root = root;
-        this.ws = new WebSocket("wss://app6534.acapp.acwing.com.cn/wss/multiplayer/");  //客户端和服务器端建立连接，名称和路由一致
+        this.ws = new WebSocket("wss://app6534.acapp.acwing.com.cn/wss/multiplayer/");  //客户端和服务器端建立连接请求，名称和路由一致
         this.start();
     }
-    start() { }
+    start() {
+        this.receive();
+    }
 
-    send_create_player() {
+    receive() {
+        //ws协议的双端连接函数
+        let outer = this;
+        this.ws.onmessage = function (e) {  //接收信息
+            let data = JSON.parse(e.data);  //将字符串转换成json
+            if (data.uuid === outer.uuid)
+                return false; //不用再向自己广播信息
+
+            if (data.event === "create_player") {
+                outer.receive_create_player(data.uuid, data.username, data.photo);
+            }
+        };
+    }
+
+    send_create_player(username, photo) {
+        let outer = this;
         this.ws.send(JSON.stringify({   //将json转换成字符串
-            'message': "created player",
+            'event': "create_player",
+            'uuid': outer.uuid, //在playground类中被定义
+            'username': username,
+            'photo': photo,
         }));
     }
 
-    receive_create_player() {
-
+    receive_create_player(uuid, username, photo) {
+        let player = new Player(this.root, {
+            x: this.root.width / 2 / this.root.scale,
+            y: 0.5,
+            radius: 0.05,
+            color: 'white',
+            speed: 0.15,
+            character: "enemy",
+            username: username,
+            photo: photo,
+        });
+        player.uuid = uuid;
+        this.root.players.push(player);
     }
 }class GamePlayground {
     constructor(root) {
@@ -547,6 +593,7 @@ class FireBall extends GameObject {
             username: this.root.settings.username,
             photo: this.root.settings.photo
         }));
+        //所以players[0]代表的是自己
 
         if (mode === "single mode") {
             for (let i = 0; i < 5; i++)
@@ -560,9 +607,13 @@ class FireBall extends GameObject {
                     //机器人不要头像和名字
                 }));
         } else if (mode === "multi mode") {
-            this.mps = new MultiPlayerSocket(this);  //简称mps
-            this.mps.ws.onopen = function () {   //当连接创建成功后激发回调函数
-                outer.mps.send_create_player();
+            this.mps = new MultiPlayerSocket(this);  //简称mps，类似ctx的作用
+            this.mps.uuid = this.players[0].uuid;   //直接为mps新定义了一个uuid
+            this.mps.ws.onopen = function () {   //当ws连接创建成功后激发回调函数
+                outer.mps.send_create_player(
+                    outer.root.settings.username,
+                    outer.root.settings.photo
+                );
             };
         }
     }

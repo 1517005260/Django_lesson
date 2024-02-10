@@ -153,3 +153,6 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+
+ROOM_CAPACITY = 5  #设立每个房间的人数上限
