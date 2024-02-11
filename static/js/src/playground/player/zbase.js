@@ -28,16 +28,27 @@ class Player extends GameObject {
 
         this.fireballs = [];
 
-        this.status = "live";
-
         if (this.character !== "robot") {
             //canvas用图片填充图形
             this.img = new Image();
             this.img.src = this.photo;
         }
+
+        if (this.character === "me") {
+            this.fireball_coldtime = 3; //冷却时间3秒
+            this.fireball_img = new Image();
+            this.fireball_img.src = "https://cdn.acwing.com/media/article/image/2021/12/02/1_9340c86053-fireball.png";
+        }
     }
 
     start() {
+        this.root.player_count++;
+        this.root.notice_board.write("已就绪：" + this.root.player_count + "人/3人");
+        if (this.root.player_count >= 3) {
+            this.root.state = "fighting";
+            this.root.notice_board.write("Fighting!");
+        }
+
         if (this.character === "me") {
             //自己的操作逻辑由自己定
             //别人的操作逻辑是通过后端发送出来的
@@ -60,6 +71,8 @@ class Player extends GameObject {
         });
 
         this.root.game_map.$canvas.on("mousedown", function (e) {
+            if (outer.root.state !== "fighting")
+                return false;  //仅战斗阶段且玩家活着才可以操作
 
             //修改绝对坐标为相对坐标
             const rect = outer.ctx.canvas.getBoundingClientRect();
@@ -71,6 +84,9 @@ class Player extends GameObject {
                 let tx = (e.clientX - rect.left) / outer.root.scale;//e.clientX, e.clientY就是事件mousedown的位置
                 let ty = (e.clientY - rect.top) / outer.root.scale
                 if (outer.cur_skill === "fireball") {
+                    if (outer.fireball_coldtime > outer.eps)
+                        return false;
+
                     let fireball = outer.shoot_fireball(tx, ty);
                     if (outer.root.mode === "multi mode")
                         outer.root.mps.send_shoot_fireball(tx, ty, fireball.uuid);
@@ -92,8 +108,14 @@ class Player extends GameObject {
 
         $(window).on("keydown", function (e) {
             //对整个视窗的事件监听
+
+            if (outer.root.state !== "fighting")
+                return false;
+
             if (e.which === 81) {
                 //即q键
+                if (outer.fireball_coldtime > outer.eps)
+                    return false;
                 outer.cur_skill = "fireball";
                 return false; //禁用原Q键
             }
@@ -101,7 +123,6 @@ class Player extends GameObject {
     }
 
     shoot_fireball(target_x, target_y) {  //发射火球，传入终点坐标
-        if (this.status === "die") return false;
         let sita = Math.atan2(target_y - this.y, target_x - this.x);  //发射角度
         let fireball = new FireBall(this.root, {
             player: this,
@@ -115,6 +136,7 @@ class Player extends GameObject {
             move_length: 1, //射程
             damage: 0.01,   //血量表现为球的大小，受击后减去damage半径
         });
+        this.fireball_coldtime = 3;  //重置冷却
         this.fireballs.push(fireball);
         return fireball; //需要获取这个火球的uuid
     }
@@ -183,12 +205,20 @@ class Player extends GameObject {
     }
 
     update() {
+        this.spent_time += this.timedelta / 1000;
         this.update_move();
+
+        if (this.character === "me" && this.root.state === "fighting")
+            this.update_coldtime();
+
         this.render();
     }
 
+    update_coldtime() {
+        this.fireball_coldtime = Math.max(0, this.fireball_coldtime - this.timedelta / 1000);
+    }
+
     update_move() {
-        this.spent_time += this.timedelta / 1000;
         //加入人机对战时前4秒ai不会攻击的机制
         //加入人机对战时ai每3秒放一次技能的机制
         if (this.character === "robot" && this.spent_time > 4 && Math.random() < 1 / 120.0) {
@@ -246,12 +276,37 @@ class Player extends GameObject {
             this.ctx.fillStyle = this.color;
             this.ctx.fill();
         }
+
+        if (this.character === "me" && this.root.state === "fighting")
+            this.render_skill_coldtime();
+    }
+
+    render_skill_coldtime() {
+        //宽最大16/9，长最大1
+        let scale = this.root.scale;
+        let x = 1.5, y = 0.9, r = 0.04;
+        //ctx渲染技能图标
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.arc(x * scale, y * scale, r * scale, 0, Math.PI * 2, false);
+        this.ctx.stroke();
+        this.ctx.clip();
+        this.ctx.drawImage(this.fireball_img, (x - r) * scale, (y - r) * scale, r * 2 * scale, r * 2 * scale);
+        this.ctx.restore();
+        //ctx渲染技能冷却的转圈
+        if (this.fireball_coldtime > 0) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x * scale, y * scale);
+            this.ctx.arc(x * scale, y * scale, r * scale, 0 - Math.PI / 2, Math.PI * 2 * (1 - this.fireball_coldtime / 3) - Math.PI / 2, true);
+            this.ctx.lineTo(x * scale, y * scale);
+            this.ctx.fillStyle = "rgba(0, 0, 255, 0.6)";
+            this.ctx.fill();
+        }
     }
 
     on_destroy() {
         for (let i = 0; i < this.root.players.length; i++) {
             if (this === this.root.players[i]) {
-                this.status = "die";
                 this.root.players.splice(i, 1);
                 break;
             }
