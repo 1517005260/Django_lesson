@@ -34,10 +34,14 @@ class Player extends GameObject {
             this.img.src = this.photo;
         }
 
-        if (this.character === "me") {
+        if (this.character === "me") {  //只需要给自己渲染技能图标和冷却
             this.fireball_coldtime = 3; //冷却时间3秒
             this.fireball_img = new Image();
             this.fireball_img.src = "https://cdn.acwing.com/media/article/image/2021/12/02/1_9340c86053-fireball.png";
+
+            this.blink_coldtime = 0;  //初始可以闪现
+            this.blink_img = new Image();
+            this.blink_img.src = "https://cdn.acwing.com/media/article/image/2021/12/02/1_daccabdc53-blink.png";
         }
     }
 
@@ -66,13 +70,13 @@ class Player extends GameObject {
     events() {
         let outer = this;
 
-        this.root.game_map.$canvas.on("contextmenu", function () {
+        $(window).on("contextmenu", function () {  //发现更新完地图后如果点击地图外会弹出菜单影响游戏体验，遂全局禁用
             return false; //禁用本游戏界面中的右键，因为我们仿英雄联盟右键走路
         });
 
         this.root.game_map.$canvas.on("mousedown", function (e) {
             if (outer.root.state !== "fighting")
-                return false;  //仅战斗阶段且玩家活着才可以操作
+                return false;  //仅战斗阶段才可以操作
 
             //修改绝对坐标为相对坐标
             const rect = outer.ctx.canvas.getBoundingClientRect();
@@ -90,6 +94,13 @@ class Player extends GameObject {
                     let fireball = outer.shoot_fireball(tx, ty);
                     if (outer.root.mode === "multi mode")
                         outer.root.mps.send_shoot_fireball(tx, ty, fireball.uuid);
+                } else if (outer.cur_skill === "blink") {
+                    if (outer.blink_coldtime > outer.eps)
+                        return false;
+                    outer.blink(tx, ty);
+
+                    if (outer.root.mode === "multi mode")
+                        outer.root.mps.send_blink(tx, ty);
                 }
 
                 outer.cur_skill = null;
@@ -118,6 +129,12 @@ class Player extends GameObject {
                     return false;
                 outer.cur_skill = "fireball";
                 return false; //禁用原Q键
+            } else if (e.which === 70) {
+                //即F键
+                if (outer.blink_coldtime > outer.eps)
+                    return false;
+                outer.cur_skill = "blink";
+                return false;
             }
         });
     }
@@ -149,6 +166,17 @@ class Player extends GameObject {
                 break;
             }
         }
+    }
+
+    blink(tx, ty) {
+        let d = this.get_dist(this.x, this.y, tx, ty);
+        d = Math.min(d, 0.15);  //设置最大闪现上限
+        let sita = Math.atan2(ty - this.y, tx - this.x);
+        this.x += d * Math.cos(sita);
+        this.y += d * Math.sin(sita);
+
+        this.blink_coldtime = 12;
+        this.move_length = 0;  //闪现后有僵直
     }
 
     get_dist(x1, y1, x2, y2) {
@@ -216,6 +244,7 @@ class Player extends GameObject {
 
     update_coldtime() {
         this.fireball_coldtime = Math.max(0, this.fireball_coldtime - this.timedelta / 1000);
+        this.blink_coldtime = Math.max(0, this.blink_coldtime - this.timedelta / 1000);
     }
 
     update_move() {
@@ -302,9 +331,30 @@ class Player extends GameObject {
             this.ctx.fillStyle = "rgba(0, 0, 255, 0.6)";
             this.ctx.fill();
         }
+
+        // 闪现直接模仿火球写即可
+        x = 1.62, y = 0.9, r = 0.04;
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.arc(x * scale, y * scale, r * scale, 0, Math.PI * 2, false);
+        this.ctx.stroke();
+        this.ctx.clip();
+        this.ctx.drawImage(this.blink_img, (x - r) * scale, (y - r) * scale, r * 2 * scale, r * 2 * scale);
+        this.ctx.restore();
+        if (this.blink_coldtime > 0) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x * scale, y * scale);
+            this.ctx.arc(x * scale, y * scale, r * scale, 0 - Math.PI / 2, Math.PI * 2 * (1 - this.blink_coldtime / 10) - Math.PI / 2, true);
+            this.ctx.lineTo(x * scale, y * scale);
+            this.ctx.fillStyle = "rgba(0, 0, 255, 0.6)";
+            this.ctx.fill();
+        }
     }
 
     on_destroy() {
+        if (this.characcter === "me")
+            this.root.state = "over";
+
         for (let i = 0; i < this.root.players.length; i++) {
             if (this === this.root.players[i]) {
                 this.root.players.splice(i, 1);
