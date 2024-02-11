@@ -35,7 +35,7 @@ class Player extends GameObject {
         }
 
         if (this.character === "me") {  //只需要给自己渲染技能图标和冷却
-            this.fireball_coldtime = 3; //冷却时间3秒
+            this.fireball_coldtime = 2; //冷却时间2秒
             this.fireball_img = new Image();
             this.fireball_img.src = "https://cdn.acwing.com/media/article/image/2021/12/02/1_9340c86053-fireball.png";
 
@@ -88,14 +88,14 @@ class Player extends GameObject {
                 let tx = (e.clientX - rect.left) / outer.root.scale;//e.clientX, e.clientY就是事件mousedown的位置
                 let ty = (e.clientY - rect.top) / outer.root.scale
                 if (outer.cur_skill === "fireball") {
-                    if (outer.fireball_coldtime > outer.eps)
+                    if (outer.fireball_coldtime > 0)
                         return false;
 
                     let fireball = outer.shoot_fireball(tx, ty);
                     if (outer.root.mode === "multi mode")
                         outer.root.mps.send_shoot_fireball(tx, ty, fireball.uuid);
                 } else if (outer.cur_skill === "blink") {
-                    if (outer.blink_coldtime > outer.eps)
+                    if (outer.blink_coldtime > 0)
                         return false;
                     outer.blink(tx, ty);
 
@@ -125,13 +125,13 @@ class Player extends GameObject {
 
             if (e.which === 81) {
                 //即q键
-                if (outer.fireball_coldtime > outer.eps)
+                if (outer.fireball_coldtime > 0)
                     return false;
                 outer.cur_skill = "fireball";
                 return false; //禁用原Q键
             } else if (e.which === 70) {
                 //即F键
-                if (outer.blink_coldtime > outer.eps)
+                if (outer.blink_coldtime > 0)
                     return false;
                 outer.cur_skill = "blink";
                 return false;
@@ -153,7 +153,7 @@ class Player extends GameObject {
             move_length: 1, //射程
             damage: 0.01,   //血量表现为球的大小，受击后减去damage半径
         });
-        this.fireball_coldtime = 3;  //重置冷却
+        this.fireball_coldtime = 2;  //重置冷却
         this.fireballs.push(fireball);
         return fireball; //需要获取这个火球的uuid
     }
@@ -322,11 +322,18 @@ class Player extends GameObject {
         this.ctx.clip();
         this.ctx.drawImage(this.fireball_img, (x - r) * scale, (y - r) * scale, r * 2 * scale, r * 2 * scale);
         this.ctx.restore();
+        //ctx渲染技能提示
+        let keyX = 1.5, keyY = 0.9 + 0.06;
+        let fontsize = 12;
+        this.ctx.font = `${fontsize}px Arial`; // 设置字体大小和类型
+        this.ctx.fillStyle = "white"; // 设置字体颜色
+        this.ctx.textAlign = "center";
+        this.ctx.fillText("Q", keyX * scale, keyY * scale);
         //ctx渲染技能冷却的转圈
         if (this.fireball_coldtime > 0) {
             this.ctx.beginPath();
             this.ctx.moveTo(x * scale, y * scale);
-            this.ctx.arc(x * scale, y * scale, r * scale, 0 - Math.PI / 2, Math.PI * 2 * (1 - this.fireball_coldtime / 3) - Math.PI / 2, true);
+            this.ctx.arc(x * scale, y * scale, r * scale, 0 - Math.PI / 2, Math.PI * 2 * (1 - this.fireball_coldtime / 2) - Math.PI / 2, true);
             this.ctx.lineTo(x * scale, y * scale);
             this.ctx.fillStyle = "rgba(0, 0, 255, 0.6)";
             this.ctx.fill();
@@ -341,10 +348,15 @@ class Player extends GameObject {
         this.ctx.clip();
         this.ctx.drawImage(this.blink_img, (x - r) * scale, (y - r) * scale, r * 2 * scale, r * 2 * scale);
         this.ctx.restore();
+        keyX = 1.62, keyY = 0.9 + 0.06;
+        this.ctx.font = `${fontsize}px Arial`;
+        this.ctx.fillStyle = "white";
+        this.ctx.textAlign = "center";
+        this.ctx.fillText("F", keyX * scale, keyY * scale);
         if (this.blink_coldtime > 0) {
             this.ctx.beginPath();
             this.ctx.moveTo(x * scale, y * scale);
-            this.ctx.arc(x * scale, y * scale, r * scale, 0 - Math.PI / 2, Math.PI * 2 * (1 - this.blink_coldtime / 10) - Math.PI / 2, true);
+            this.ctx.arc(x * scale, y * scale, r * scale, 0 - Math.PI / 2, Math.PI * 2 * (1 - this.blink_coldtime / 12) - Math.PI / 2, true);
             this.ctx.lineTo(x * scale, y * scale);
             this.ctx.fillStyle = "rgba(0, 0, 255, 0.6)";
             this.ctx.fill();
