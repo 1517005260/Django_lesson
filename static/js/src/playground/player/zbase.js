@@ -175,6 +175,13 @@ class Player extends GameObject {
         this.speed *= 1.5;
     }
 
+    receive_attack(x, y, sita, damage, ball_uuid, attacker) {//强制受击判定
+        attacker.destroy_fireball(ball_uuid);
+        this.x = x;
+        this.y = y;
+        this.is_attacked(sita, damage);
+    }
+
     update() {
         this.update_move();
         this.render();

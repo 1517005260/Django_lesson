@@ -363,6 +363,13 @@ class Particle extends GameObject {
         this.speed *= 1.5;
     }
 
+    receive_attack(x, y, sita, damage, ball_uuid, attacker) {//强制受击判定
+        attacker.destroy_fireball(ball_uuid);
+        this.x = x;
+        this.y = y;
+        this.is_attacked(sita, damage);
+    }
+
     update() {
         this.update_move();
         this.render();
@@ -470,7 +477,8 @@ class FireBall extends GameObject {
         }
 
         this.update_move();
-        this.update_attack();
+        if (this.player.character !== "enemy")  //其他窗口无权判断受击，碰撞判断决策权完全归于发出者
+            this.update_attack();
         this.render();
     }
 
@@ -503,9 +511,13 @@ class FireBall extends GameObject {
         return dist < this.radius + player.radius;
     }
 
-    attack(player) {
+    attack(player) {  //player受击
         let sita = Math.atan2(player.y - this.y, player.x - this.x);
         player.is_attacked(sita, this.damage);
+
+        if (this.root.mode === "multi mode")
+            this.root.mps.send_attack(player.uuid, player.x, player.y, sita, this.damage, this.uuid);
+
         this.destroy();
     }
 
@@ -563,6 +575,8 @@ class FireBall extends GameObject {
                 outer.receive_move_to(data.uuid, data.tx, data.ty);
             } else if (data.event === "shoot_fireball") {
                 outer.receive_shoot_fireball(data.uuid, data.tx, data.ty, data.ball_uuid);
+            } else if (data.event === "attack") {
+                outer.receive_attack(data.uuid, data.attackee_uuid, data.x, data.y, data.sita, data.damage, data.ball_uuid)
             }
         };
     }
@@ -626,6 +640,27 @@ class FireBall extends GameObject {
         if (player) {
             let fireball = player.shoot_fireball(tx, ty);
             fireball.uuid = ball_uuid; //所有视窗中的ball_uuid应该统一
+        }
+    }
+
+    send_attack(attackee_uuid, x, y, sita, damage, ball_uuid) {
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event': "attack",
+            'uuid': outer.uuid,
+            'attackee_uuid': attackee_uuid,
+            'x': x,
+            'y': y,
+            'sita': sita,
+            'damage': damage,
+            'ball_uuid': ball_uuid,
+        }));
+    }
+    receive_attack(uuid, attackee_uuid, x, y, sita, damage, ball_uuid) {
+        let attacker = this.get_player(uuid);
+        let attackee = this.get_player(attackee_uuid);
+        if (attacker && attackee) {
+            attackee.receive_attack(x, y, sita, damage, ball_uuid, attacker);
         }
     }
 }class GamePlayground {

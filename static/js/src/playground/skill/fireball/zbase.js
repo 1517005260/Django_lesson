@@ -30,7 +30,8 @@ class FireBall extends GameObject {
         }
 
         this.update_move();
-        this.update_attack();
+        if (this.player.character !== "enemy")  //其他窗口无权判断受击，碰撞判断决策权完全归于发出者
+            this.update_attack();
         this.render();
     }
 
@@ -63,9 +64,13 @@ class FireBall extends GameObject {
         return dist < this.radius + player.radius;
     }
 
-    attack(player) {
+    attack(player) {  //player受击
         let sita = Math.atan2(player.y - this.y, player.x - this.x);
         player.is_attacked(sita, this.damage);
+
+        if (this.root.mode === "multi mode")
+            this.root.mps.send_attack(player.uuid, player.x, player.y, sita, this.damage, this.uuid);
+
         this.destroy();
     }
 
