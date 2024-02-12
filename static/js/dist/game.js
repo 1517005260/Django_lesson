@@ -112,17 +112,95 @@ let Game_Animation = function (now_timestamp) {
     requestAnimationFrame(Game_Animation);
 }
 
-requestAnimationFrame(Game_Animation);class GameMap extends GameObject {
+requestAnimationFrame(Game_Animation);//聊天部分我们不用canvas画布，只是一个html元素，也不用继承gameobject
+
+class ChatField {
+    constructor(root) {
+        this.root = root;
+        this.$history = $(`<div class="game-chat-field-history">历史记录</div>`);
+        this.$input = $(`<input type="text" class="game-chat-field-input" placeholder="Enter键入信息/Esc关闭">`);
+
+        this.$history.hide();
+
+        this.func_id = null; //防止历史记录过快消失
+
+        this.root.$playground.append(this.$history);
+        this.root.$playground.append(this.$input);
+
+        this.start();
+    }
+
+    start(){
+        this.events();
+    }
+
+    events(){
+        let outer = this;
+        this.$input.on("keydown",function(e){
+            if (e.which === 27){
+                outer.hide_input();
+                return false;
+            }else if (e.which === 13){
+                let username = outer.root.root.settings.username;
+                let text = outer.$input.val();
+                if(text){
+                    outer.$input.val("");   //每次输入完后清空聊天框
+                    outer.add_message(username, text);
+                    outer.root.mps.send_message(username, text);
+                }
+                return false;
+            }
+        });
+    }
+
+    add_message(username, text){
+        this.show_history();
+        let message = `@${username}: ${text}`;
+        this.$history.append(this.html_message(message));
+        this.$history.scrollTop(this.$history[0].scrollHeight);  //每次发消息后追踪到最新消息
+    }
+
+    html_message(message){
+        return $(`<div>${message}</div>`);
+    }
+
+    show_history(){
+        let outer = this;
+        this.$history.fadeIn();  //淡入
+
+        if(this.func_id)
+            clearTimeout(this.func_id);  //清空上个历史记录的显示计时
+
+        this.func_id = setTimeout(function(){   //即过3s后执行function
+            outer.$history.fadeOut();
+            outer.func_id = null;   //只要关闭了就不用再记id了
+        },3000);
+    }
+
+    show_input(){
+        this.show_history();
+        this.$input.show();
+        this.$input.focus();   //聚焦到输入框上输入
+    }
+
+    hide_input(){
+        this.$input.hide();
+        this.root.game_map.$canvas.focus();  //重新让地图获取聚焦权
+    }
+}
+class GameMap extends GameObject {
     constructor(root) {  //传入playground类
         super();
         this.root = root;
-        this.$canvas = $(`<canvas></canvas>`);
+        this.$canvas = $(`<canvas tabindex=0></canvas>`);
         this.ctx = this.$canvas[0].getContext('2d');
         this.ctx.canvas.width = this.root.width;
         this.ctx.canvas.height = this.root.height;
         this.root.$playground.append(this.$canvas);
     }
-    start() { }
+    start() {
+        this.$canvas.focus(); //聚焦
+    }
 
     resize() {
         //每次视窗变化时都要渲染一下，防止地图出现颜色缓慢渐变
@@ -141,7 +219,8 @@ requestAnimationFrame(Game_Animation);class GameMap extends GameObject {
         this.ctx.fillStyle = "rgba(0,0,0,0.2)"
         this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     }
-}class NoticeBoard extends GameObject {
+}
+class NoticeBoard extends GameObject {
     constructor(root) {
         super();
         this.root = root;
@@ -289,7 +368,8 @@ class Particle extends GameObject {
 
         this.root.game_map.$canvas.on("mousedown", function (e) {
             if (outer.root.state !== "fighting")
-                return false;  //仅战斗阶段才可以操作
+                return true;  //仅战斗阶段才可以操作
+            //true就是不处理后续的事件，但是不禁用其他键。现在我们新增了聊天框，所以不能禁用所有键
 
             //修改绝对坐标为相对坐标
             const rect = outer.ctx.canvas.getBoundingClientRect();
@@ -330,22 +410,35 @@ class Particle extends GameObject {
             }
         });
 
-        $(window).on("keydown", function (e) {
-            //对整个视窗的事件监听
+        this.root.game_map.$canvas.on("keydown", function (e) {
+
+            //在开始前也可聊天
+            if (e.which === 13){
+                //enter
+                if (outer.root.mode === "multi mode"){
+                    outer.root.chat_field.show_input();
+                    return false;
+                }
+            }else if (e.which === 27){
+                //esc
+                if (outer.root.mode === "multi mode"){
+                    outer.root.chat_field.hide_input();
+                }
+            }
 
             if (outer.root.state !== "fighting")
-                return false;
+                return true;
 
             if (e.which === 81) {
                 //即q键
                 if (outer.fireball_coldtime > 0)
-                    return false;
+                    return true;
                 outer.cur_skill = "fireball";
                 return false; //禁用原Q键
             } else if (e.which === 70) {
                 //即F键
                 if (outer.blink_coldtime > 0)
-                    return false;
+                    return true;
                 outer.cur_skill = "blink";
                 return false;
             }
@@ -722,6 +815,8 @@ class FireBall extends GameObject {
                 outer.receive_attack(data.uuid, data.attackee_uuid, data.x, data.y, data.sita, data.damage, data.ball_uuid)
             }else if (data.event === "blink"){
                 outer.receive_blink(data.uuid, data.tx, data.ty);
+            }else if (data.event === "message"){
+                outer.receive_message(data.uuid, data.username, data.text);
             }
         };
     }
@@ -812,7 +907,7 @@ class FireBall extends GameObject {
 
     send_blink(tx, ty){
         let outer = this;
-        this.ws.send(JSON.stringfy({
+        this.ws.send(JSON.stringify({
             'event': "blink",
             'uuid': outer.uuid,
             'tx': tx,
@@ -824,6 +919,20 @@ class FireBall extends GameObject {
         let player = this.get_player(uuid);
         if(player)
             player.blink(tx,ty);
+    }
+
+    send_message(username, text){
+        let outer = this;
+        this.ws.send(JSON.stringify({
+            'event': "message",
+            'uuid': outer.uuid,
+            'username': username,
+            'text': text,
+        }));
+    }
+
+    receive_message(uuid, username, text){
+        this.root.chat_field.add_message(username, text);
     }
 }
 class GamePlayground {
@@ -908,6 +1017,7 @@ class GamePlayground {
                     //机器人不要头像和名字
                 }));
         } else if (mode === "multi mode") {
+            this.chat_field = new ChatField(this);   // 为多人模式创建聊天功能
             this.mps = new MultiPlayerSocket(this);  //简称mps，类似ctx的作用
             this.mps.uuid = this.players[0].uuid;   //直接为mps新定义了一个uuid
             this.mps.ws.onopen = function () {   //当ws连接创建成功后激发回调函数

@@ -80,6 +80,7 @@ class GamePlayground {
                     //机器人不要头像和名字
                 }));
         } else if (mode === "multi mode") {
+            this.chat_field = new ChatField(this);   // 为多人模式创建聊天功能
             this.mps = new MultiPlayerSocket(this);  //简称mps，类似ctx的作用
             this.mps.uuid = this.players[0].uuid;   //直接为mps新定义了一个uuid
             this.mps.ws.onopen = function () {   //当ws连接创建成功后激发回调函数

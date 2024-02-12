@@ -2,13 +2,15 @@ class GameMap extends GameObject {
     constructor(root) {  //传入playground类
         super();
         this.root = root;
-        this.$canvas = $(`<canvas></canvas>`);
+        this.$canvas = $(`<canvas tabindex=0></canvas>`);
         this.ctx = this.$canvas[0].getContext('2d');
         this.ctx.canvas.width = this.root.width;
         this.ctx.canvas.height = this.root.height;
         this.root.$playground.append(this.$canvas);
     }
-    start() { }
+    start() {
+        this.$canvas.focus(); //聚焦
+    }
 
     resize() {
         //每次视窗变化时都要渲染一下，防止地图出现颜色缓慢渐变

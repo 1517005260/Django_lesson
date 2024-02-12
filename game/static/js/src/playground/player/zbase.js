@@ -76,7 +76,8 @@ class Player extends GameObject {
 
         this.root.game_map.$canvas.on("mousedown", function (e) {
             if (outer.root.state !== "fighting")
-                return false;  //仅战斗阶段才可以操作
+                return true;  //仅战斗阶段才可以操作
+            //true就是不处理后续的事件，但是不禁用其他键。现在我们新增了聊天框，所以不能禁用所有键
 
             //修改绝对坐标为相对坐标
             const rect = outer.ctx.canvas.getBoundingClientRect();
@@ -117,22 +118,35 @@ class Player extends GameObject {
             }
         });
 
-        $(window).on("keydown", function (e) {
-            //对整个视窗的事件监听
+        this.root.game_map.$canvas.on("keydown", function (e) {
+
+            //在开始前也可聊天
+            if (e.which === 13){
+                //enter
+                if (outer.root.mode === "multi mode"){
+                    outer.root.chat_field.show_input();
+                    return false;
+                }
+            }else if (e.which === 27){
+                //esc
+                if (outer.root.mode === "multi mode"){
+                    outer.root.chat_field.hide_input();
+                }
+            }
 
             if (outer.root.state !== "fighting")
-                return false;
+                return true;
 
             if (e.which === 81) {
                 //即q键
                 if (outer.fireball_coldtime > 0)
-                    return false;
+                    return true;
                 outer.cur_skill = "fireball";
                 return false; //禁用原Q键
             } else if (e.which === 70) {
                 //即F键
                 if (outer.blink_coldtime > 0)
-                    return false;
+                    return true;
                 outer.cur_skill = "blink";
                 return false;
             }

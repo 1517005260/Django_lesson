@@ -12,7 +12,6 @@ class MultiPlayer(AsyncWebsocketConsumer):
         await self.accept()   #建立连接
 
     async def disconnect(self, close_code):   #前端刷新或者关闭后执行，但是不一定靠谱，比如用户断电后就不会向服务器发送任何信息，也就不会执行这个函数
-        print('disconnect')
         await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
     async def create_player(self,data):
@@ -97,6 +96,15 @@ class MultiPlayer(AsyncWebsocketConsumer):
             'ty': data['ty'],
             })
 
+    async def message(self, data):
+        await self.channel_layer.group_send(self.room_name,{
+            'type': "group_send_event",
+            'event': "message",
+            'uuid': data['uuid'],
+            'username': data['username'],
+            'text': data['text'],
+            })
+
     async def receive(self, text_data):  #接收前端的请求
         data = json.loads(text_data)
         event = data['event']
@@ -110,6 +118,8 @@ class MultiPlayer(AsyncWebsocketConsumer):
             await self.attack(data)
         elif event == "blink":
             await self.blink(data)
+        elif event == "message":
+            await self.message(data)
     
     async def group_send_event(self,data): #与type一致
         await self.send(text_data=json.dumps(data))
