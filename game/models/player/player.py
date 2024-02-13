@@ -12,6 +12,7 @@ class Player(models.Model):
     #增加的用户的头像，指定了最大长度并允许用户不上传头像
     openid = models.CharField(default="",max_length=50,blank=True,null=True)
     # openid 是一个32位的字符串，为了保险可以多开几位。默认为空且可以为空
+    score = models.IntegerField(default=1500)
 
     def __str__(self):  
         #在管理系统中显示用户的用户名
