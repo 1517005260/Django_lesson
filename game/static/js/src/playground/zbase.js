@@ -40,6 +40,7 @@ class GamePlayground {
             outer.root.os.api.window.on_close(function () {
                 //on_close即关闭之前
                 $(window).off(`resize.${uuid}`);
+                outer.hide()
             });
         }
     }

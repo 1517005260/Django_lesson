@@ -69,12 +69,12 @@ class Player extends GameObject {
 
     events() {
         let outer = this;
-        if (this.root.root.os){
+        if (this.root.root.os) {
             //acapp端禁用acapp界面的右键就行
-            this.root.game_map.$canvas.on("contextmenu", function(){
+            this.root.game_map.$canvas.on("contextmenu", function () {
                 return false;
             });
-        }else{
+        } else {
             $(window).on("contextmenu", function () {  //发现更新完地图后如果点击地图外会弹出菜单影响游戏体验，遂全局禁用
                 return false; //禁用本游戏界面中的右键，因为我们仿英雄联盟右键走路
             });
@@ -127,15 +127,15 @@ class Player extends GameObject {
         this.root.game_map.$canvas.on("keydown", function (e) {
 
             //在开始前也可聊天
-            if (e.which === 13){
+            if (e.which === 13) {
                 //enter
-                if (outer.root.mode === "multi mode"){
+                if (outer.root.mode === "multi mode") {
                     outer.root.chat_field.show_input();
                     return false;
                 }
-            }else if (e.which === 27){
+            } else if (e.which === 27) {
                 //esc
-                if (outer.root.mode === "multi mode"){
+                if (outer.root.mode === "multi mode") {
                     outer.root.chat_field.hide_input();
                 }
             }
@@ -169,7 +169,7 @@ class Player extends GameObject {
             vx: Math.cos(sita),
             vy: Math.sin(sita),
             color: 'orange',   //火球是橙色的
-            speed: 0.5,
+            speed: 0.6,
             move_length: 1, //射程
             damage: 0.01,   //血量表现为球的大小，受击后减去damage半径
         });
@@ -242,7 +242,7 @@ class Player extends GameObject {
         this.damage_vy = Math.sin(sita);
         this.damage_speed = damage * 100;
         //受击后体积减小，速度变快
-        this.speed *= 1.5;
+        this.speed *= 1.2;
     }
 
     receive_attack(x, y, sita, damage, ball_uuid, attacker) {//强制受击判定
@@ -263,8 +263,8 @@ class Player extends GameObject {
         this.render();
     }
 
-    update_win(){
-        if(this.root.state === "fighting" && this.character === "me" && this.root.players.length === 1){
+    update_win() {
+        if (this.root.state === "fighting" && this.character === "me" && this.root.players.length === 1) {
             this.root.state = "over";
             this.root.score_board.win();
         }
@@ -392,7 +392,7 @@ class Player extends GameObject {
     }
 
     on_destroy() {
-        if (this.character === "me" && this.root.state === "fighting"){
+        if (this.character === "me" && this.root.state === "fighting") {
             this.root.state = "over";
             this.root.score_board.lose();
         }
