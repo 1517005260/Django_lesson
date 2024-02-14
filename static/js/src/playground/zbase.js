@@ -18,13 +18,30 @@ class GamePlayground {
         return colors[Math.floor(Math.random() * colors.length)];
     }
 
+    create_uuid() {
+        //为每个窗口定义一个uuid，方便后续监听函数删除
+        let res = "";
+        for (let i = 0; i < 8; i++) {
+            let x = parseInt(Math.floor(Math.random() * 10));
+            res += x;
+        }
+        return res;
+    }
 
     start() {
         //每次修改窗口大小时都要修改resize函数
         let outer = this;
-        $(window).resize(function () {
+        let uuid = this.create_uuid();
+        $(window).on(`resize.${uuid}`, function () {
             outer.resize();
         });
+        if (this.root.os) {
+            //仅对于acapp端
+            outer.root.os.api.window.on_close(function () {
+                //on_close即关闭之前
+                $(window).off(`resize.${uuid}`);
+            });
+        }
     }
 
     resize() {
@@ -52,6 +69,7 @@ class GamePlayground {
         this.mode = mode;   //记得保存mode类型，用于后续player广播判断
         this.state = "waiting";  //状态 waiting->fighting->over
         this.notice_board = new NoticeBoard(this);
+        this.score_board = new ScoreBoard(this);
         this.player_count = 0; //初始下没有人
 
         this.players = [];  //添加玩家
@@ -93,6 +111,34 @@ class GamePlayground {
     }
 
     hide() {
+        //结束一局游戏返回时应该删除干净所有元素
+        while (this.players && this.players.length > 0) { //加上this.players条件是因为一开始playground默认关闭，players里面没有元素，故不用操作
+            this.players[0].destroy();
+            //不用for循环是因为会漏删：
+            //ex 原来为 序号  0 1 2 3 4
+            //          元素  0 1 2 3 4
+            //进行一次删除后  0 1 2 3
+            //                1 2 3 4
+            //此时 i++，指向元素2，1就被漏删了
+        }
+
+        if (this.game_map) {
+            this.game_map.destroy();
+            this.game_map = null;
+        }
+
+        if (this.notice_board) {
+            this.notice_board.destroy();
+            this.notice_board = null;
+        }
+
+        if (this.score_board) {
+            this.score_board.destroy();
+            this.score_board = null;
+        }
+        this.$playground.empty();   //清空所有html标签
+        //火球和粒子特效都是有射程的，会在射程结束后删除，这里不用管
+
         this.$playground.hide();
     }
 }

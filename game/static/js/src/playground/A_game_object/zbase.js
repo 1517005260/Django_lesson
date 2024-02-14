@@ -23,6 +23,10 @@ class GameObject {
 
     update() { }
 
+    late_update() {
+        //每一帧执行一次，且在所有的update执行完后再执行
+    }
+
     on_destroy() { }  //在这个对象被销毁前执行一次  目的：删干净
 
     destroy() {
@@ -49,6 +53,12 @@ let Game_Animation = function (now_timestamp) {
             obj.update();
         }
     }
+
+    for (let i = 0; i < Game_Objects.length; i++) {
+        let obj = Game_Objects[i];
+        obj.late_update();
+    }
+
     last_timestamp = now_timestamp;
 
     requestAnimationFrame(Game_Animation);

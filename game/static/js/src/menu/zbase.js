@@ -34,6 +34,10 @@ class GameMenu {
 
     events() {
         let outer = this;
+        this.$menu.on("contextmenu", function(){
+            //禁用菜单处的右键
+            return false;
+        });
 
         this.$single_mode.on('click', function () {
             outer.hide();

@@ -59,7 +59,7 @@ class Pool:
                 'uuid':p.uuid,
                 'username':p.username,
                 'photo':p.photo,
-                'hp':100,   #用于后续判定胜负
+                'hp':100,   #用于后续判定胜负，由于被击中4次会死，所以可以设置一次hp-25
             })
         cache.set(room_name,players,3600)
         #记得要把全部的人拉近群组后再群发

@@ -69,10 +69,16 @@ class Player extends GameObject {
 
     events() {
         let outer = this;
-
-        $(window).on("contextmenu", function () {  //发现更新完地图后如果点击地图外会弹出菜单影响游戏体验，遂全局禁用
-            return false; //禁用本游戏界面中的右键，因为我们仿英雄联盟右键走路
-        });
+        if (this.root.root.os){
+            //acapp端禁用acapp界面的右键就行
+            this.root.game_map.$canvas.on("contextmenu", function(){
+                return false;
+            });
+        }else{
+            $(window).on("contextmenu", function () {  //发现更新完地图后如果点击地图外会弹出菜单影响游戏体验，遂全局禁用
+                return false; //禁用本游戏界面中的右键，因为我们仿英雄联盟右键走路
+            });
+        }
 
         this.root.game_map.$canvas.on("mousedown", function (e) {
             if (outer.root.state !== "fighting")
@@ -248,12 +254,20 @@ class Player extends GameObject {
 
     update() {
         this.spent_time += this.timedelta / 1000;
+        this.update_win();
         this.update_move();
 
         if (this.character === "me" && this.root.state === "fighting")
             this.update_coldtime();
 
         this.render();
+    }
+
+    update_win(){
+        if(this.root.state === "fighting" && this.character === "me" && this.root.players.length === 1){
+            this.root.state = "over";
+            this.root.score_board.win();
+        }
     }
 
     update_coldtime() {
@@ -378,8 +392,10 @@ class Player extends GameObject {
     }
 
     on_destroy() {
-        if (this.characcter === "me")
+        if (this.character === "me" && this.root.state === "fighting"){
             this.root.state = "over";
+            this.root.score_board.lose();
+        }
 
         for (let i = 0; i < this.root.players.length; i++) {
             if (this === this.root.players[i]) {
