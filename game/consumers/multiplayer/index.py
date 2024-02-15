@@ -18,10 +18,14 @@ from channels.db import database_sync_to_async
 
 class MultiPlayer(AsyncWebsocketConsumer):
     async def connect(self):  # 创建连接后触发
-        await self.accept()   #建立连接
+        user = self.scope['user']
+        if user.is_authenticated:
+            await self.accept()   #登录后才能连接
+        else:
+            await self.close()
 
     async def disconnect(self, close_code):   #前端刷新或者关闭后执行，但是不一定靠谱，比如用户断电后就不会向服务器发送任何信息，也就不会执行这个函数
-        if self.room_name:  #将玩家从这个房间删除
+        if hasattr(self,'room_name') and self.room_name:  #将玩家从这个房间删除
             await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
     async def create_player(self,data):

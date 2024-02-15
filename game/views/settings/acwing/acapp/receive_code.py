@@ -4,6 +4,7 @@ import requests
 from django.contrib.auth.models import User
 from game.models.player.player import Player
 from random import randint
+from rest_framework_simplejwt.tokens import RefreshToken
 
 #acapp不需要重定向到index，只要返回json信息即可，也不用login
 
@@ -45,10 +46,13 @@ def receive_code(request):
     players = Player.objects.filter(openid=openid)
     if players.exists():
         player = players[0]
+        refresh = RefreshToken.for_user(player.user)
         return JsonResponse({
             'result':"success",
             'username':player.user.username,
             'photo':player.photo,
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
         })
     
     #h,i
@@ -68,8 +72,11 @@ def receive_code(request):
     user = User.objects.create(username=username)
     player = Player.objects.create(user = user ,photo = photo,openid = openid)
     
+    refresh = RefreshToken.for_user(user)
     return JsonResponse({
        'result':"success",
         'username':player.user.username,
         'photo':player.photo,
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
    })

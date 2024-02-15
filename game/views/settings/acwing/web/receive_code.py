@@ -2,13 +2,13 @@
 #这个视图函数就是 apply_code.py 中的 redirect_uri
 #这里也是code的接收处
 
-from django.shortcuts import redirect
+from django.shortcuts import redirect, reverse #reverse是redirect的逆运算
 from django.core.cache import cache  #redis存储state
 import requests  #函数功能：向一个网站传参+请求，返回字典
 from django.contrib.auth.models import User
 from game.models.player.player import Player
-from django.contrib.auth import login
 from random import randint
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 def receive_code(request):
@@ -39,8 +39,8 @@ def receive_code(request):
     #判断用户30天内是否验证过
     players = Player.objects.filter(openid=openid)
     if players.exists():
-        login(request,players[0].user)
-        return redirect("index")
+        refresh = RefreshToken.for_user(players[0].user)
+        return redirect(reverse("index") + "?access=%s&refresh=%s" % (str(refresh.access_token), str(refresh)))
     
     #h,i
     get_userinfo_url = "https://www.acwing.com/third_party/api/meta/identity/getinfo/"
@@ -65,5 +65,5 @@ def receive_code(request):
     user = User.objects.create(username=username)
     player = Player.objects.create(user = user ,photo = photo,openid = openid)
 
-    login(request,user)
-    return redirect("index")
+    refresh = RefreshToken.for_user(user)
+    return redirect(reverse("index") + "?access=%s&refresh=%s" % (str(refresh.access_token), str(refresh)))

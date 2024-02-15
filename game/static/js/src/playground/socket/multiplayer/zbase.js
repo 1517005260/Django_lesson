@@ -1,7 +1,7 @@
 class MultiPlayerSocket {
     constructor(root) {
         this.root = root;
-        this.ws = new WebSocket("wss://app6534.acapp.acwing.com.cn/wss/multiplayer/");  //客户端和服务器端建立连接请求，名称和路由一致
+        this.ws = new WebSocket("wss://app6534.acapp.acwing.com.cn/wss/multiplayer/?token=" + root.root.access);  //客户端和服务器端建立连接请求，名称和路由一致
         this.start();
     }
 
@@ -37,9 +37,9 @@ class MultiPlayerSocket {
                 outer.receive_shoot_fireball(data.uuid, data.tx, data.ty, data.ball_uuid);
             } else if (data.event === "attack") {
                 outer.receive_attack(data.uuid, data.attackee_uuid, data.x, data.y, data.sita, data.damage, data.ball_uuid)
-            }else if (data.event === "blink"){
+            } else if (data.event === "blink") {
                 outer.receive_blink(data.uuid, data.tx, data.ty);
-            }else if (data.event === "message"){
+            } else if (data.event === "message") {
                 outer.receive_message(data.uuid, data.username, data.text);
             }
         };
@@ -129,7 +129,7 @@ class MultiPlayerSocket {
         }
     }
 
-    send_blink(tx, ty){
+    send_blink(tx, ty) {
         let outer = this;
         this.ws.send(JSON.stringify({
             'event': "blink",
@@ -139,13 +139,13 @@ class MultiPlayerSocket {
         }));
     }
 
-    receive_blink(uuid, tx, ty){
+    receive_blink(uuid, tx, ty) {
         let player = this.get_player(uuid);
-        if(player)
-            player.blink(tx,ty);
+        if (player)
+            player.blink(tx, ty);
     }
 
-    send_message(username, text){
+    send_message(username, text) {
         let outer = this;
         this.ws.send(JSON.stringify({
             'event': "message",
@@ -155,7 +155,7 @@ class MultiPlayerSocket {
         }));
     }
 
-    receive_message(uuid, username, text){
+    receive_message(uuid, username, text) {
         this.root.chat_field.add_message(username, text);
     }
 }

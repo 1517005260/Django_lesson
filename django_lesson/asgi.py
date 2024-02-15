@@ -16,8 +16,8 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_lesson.settings')   #设置的文件地址作为环境变量
 django.setup()   #加载Django项目的设置
 
-from channels.auth import AuthMiddlewareStack    #导入Channels的认证中间件栈，用于Websocket连接的用户认证。
-from channels.routing import ProtocolTypeRouter, URLRouter   #导入路由相关模块，用于定义不同协议（如HTTP和WebSocket）的路由行为
+from game.channelsmiddleware import JwtAuthMiddlewareStack   #导入jwt配置的中间件
+from channels.routing import ProtocolTypeRouter, URLRouter   #导入路由的相关模块，用于定义不同协议（如HTTP和WebSocket）的路由行为
 from django.core.asgi import get_asgi_application
 from game.routing import websocket_urlpatterns
 
@@ -26,5 +26,5 @@ channel_layer = get_channel_layer()   #获取Channel层实例，用于在不同�
  
 application = ProtocolTypeRouter({   #定义ASGI应用
     "http": get_asgi_application(),   #对于HTTP协议的请求，使用Django的ASGI应用来处理
-    "websocket": AuthMiddlewareStack(URLRouter(websocket_urlpatterns))   #对于WebSocket协议的请求，首先通过AuthMiddlewareStack进行用户认证，然后根据websocket_urlpatterns中定义的URL模式进行路由分发
+    "websocket": JwtAuthMiddlewareStack(URLRouter(websocket_urlpatterns))   #对于WebSocket协议的请求，首先通过AuthMiddlewareStack进行用户认证，然后根据websocket_urlpatterns中定义的URL模式进行路由分发
 })

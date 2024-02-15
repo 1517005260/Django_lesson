@@ -110,9 +110,30 @@ class Settings {
             //acapp端
             this.getinfo_acapp();
         } else {
-            this.getinfo_web();
+            if (this.root.access) {
+                this.getinfo_web();
+                this.refresh_jwt();  //登录后开始刷新access
+            } else {
+                this.login();   //没有access则手动登录
+            }
             this.events();  //绑定监听函数
         }
+    }
+
+    refresh_jwt() {
+        let outer = this;
+        setInterval(function () {
+            $.ajax({
+                url: "https://app6534.acapp.acwing.com.cn/settings/token/refresh/",
+                type: "POST",
+                data: {
+                    refresh: outer.root.refresh,
+                },
+                success: function (resp) {
+                    outer.root.access = resp.access
+                }
+            });
+        }, 4.5 * 60 * 1000);  //设置4.5min刷新，防止网络延迟而超时5min
     }
 
     events() {
@@ -169,32 +190,35 @@ class Settings {
                 outer.photo = resp.photo;
                 outer.hide();
                 outer.root.menu.show();
+                outer.root.access = resp.access;
+                outer.root.refresh = resp.refresh;
+                outer.refresh_jwt();
             }//acwing没有提供用户拒绝后的api，所以用户拒绝后会比较尴尬，直接卡住
         });
     }
 
-    sign_in() {
+    sign_in(username, password) {
         //登录函数
         let outer = this;
-        let username = this.$login_username.val(); //获取用户输入
-        let password = this.$login_password.val();
+        username = username || this.$login_username.val(); //获取用户输入，如果是注册则直接登录
+        password = password || this.$login_password.val();
         this.$login_error_message.empty(); //清空之前的报错记录
 
         $.ajax({
-            url: "https://app6534.acapp.acwing.com.cn/settings/login/",
-            type: "GET",
+            url: "https://app6534.acapp.acwing.com.cn/settings/token/",
+            type: "POST",
             data: {
                 username: username,
                 password: password,
             },
             success: function (resp) {
-                if (resp.result === "success")
-                    location.reload();
-                //刷新界面。机制：登录成功后重新刷新页面，再次访问网站时，getinfo函数会判定用户已经登录，所以会转至菜单页
-                else {
-                    outer.$login_error_message.html(resp.result);
-                    //获取result并以html格式赋值给前端元素
-                }
+                outer.root.access = resp.access;
+                outer.root.refresh = resp.refresh;
+                outer.refresh_jwt();
+                outer.getinfo_web();
+            },
+            error: function () {
+                outer.$login_error_message.html("用户名或密码错误");
             }
         });
     }
@@ -208,7 +232,7 @@ class Settings {
 
         $.ajax({
             url: "https://app6534.acapp.acwing.com.cn/settings/register/",
-            type: "GET",
+            type: "post",
             data: {
                 username: username,
                 password: password,
@@ -216,7 +240,7 @@ class Settings {
             },
             success: function (resp) {
                 if (resp.result === "success") {
-                    location.reload();
+                    outer.sign_in(username, password);
                 } else {
                     outer.$register_error_message.html(resp.result);
                 }
@@ -229,17 +253,10 @@ class Settings {
         if (this.platform === "ACAPP") {
             this.root.os.api.window.close();
         } else {
-            $.ajax({
-                url: "https://app6534.acapp.acwing.com.cn/settings/logout/",
-                type: "GET",
-                //登出不用传输数据
-                success: function (resp) {
-                    if (resp.result === "success") {
-                        location.reload();
-                        //刷新后getinfo检测到用户未登录，返回到登录界面
-                    }
-                }
-            });
+            //登出只要删除jwt即可
+            this.root.access = "";
+            this.root.refresh = "";
+            location.href = "/";  //重定向到主页面（即index界面）
         }
     }
 
@@ -265,6 +282,9 @@ class Settings {
             type: "GET",   //请求方式
             data: {   //传输数据
                 platform: outer.platform,
+            },
+            headers: {    //身份验证，格式见settings.py
+                'Authorization': "Bearer " + outer.root.access,
             },
             success: function (resp) {   //return函数，不要被success名字迷惑。   resp就是JsonResponse
                 //request -> resp(onse)

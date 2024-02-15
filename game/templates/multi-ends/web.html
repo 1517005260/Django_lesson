@@ -17,8 +17,9 @@
     <script type="module">
         import { Game } from "{% static 'js/dist/game.js' %}";
         $(document).ready(function () {
-            let game = new Game("game_123");
-        });
+            let game = new Game("game_123", null, "{{ access }}", "{{ refresh }}");
+        });//新增参数：os,access,refresh
+        //{{ access }} 和 {{ refresh }} 是模板变量，它们在服务器端渲染时会被替换为实际的值
         //未来的界面都是在 js 中 Game 渲染的（这样就在前端渲染，不给服务器压力）
         //$(document) 即 <html>...</html>
         //ready就是事件监听函数，在打开html渲染时只会执行一次
