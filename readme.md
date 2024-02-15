@@ -8,3 +8,23 @@
 修改完你的代码，检查无误后并已经执行过js的归并程序，却发现网页是空白的，解决方法是：在网页执行`<ctrl>+<shift>+<R>`强制刷新
 
 ## 每讲详细说明详见[help](https://git.acwing.com/glk/django_lesson/-/tree/master/help)
+
+
+# TO DO LIST
+Django课程已于[这里](https://git.acwing.com/glk/django_lesson/-/tree/5ca4d81d21ee5399db670b48be0e37751672329c)结束，接下了为我的更新
+
+1.增加小地图功能
+
+2.把地图扩大，增加障碍物
+
+3.新增技能
+
+4.新增战绩实时播报
+
+5.首页新增score排行榜页面
+
+6.新增观战功能
+
+7.增加头像选择功能
+
+......
