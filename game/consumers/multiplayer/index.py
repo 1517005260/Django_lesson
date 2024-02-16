@@ -79,7 +79,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
 
     async def attack(self,data):
         #受击后更新血量，以血量更新战绩
-        if not self.room_name:
+        if not self.room_name and hasattr(self,'room_name'):
             return
         players = cache.get(self.room_name)
 
@@ -95,7 +95,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
             if player['hp'] > 0:
                 cnt += 1
         if cnt > 1:
-            if self.room_name:
+            if self.room_name and hasattr(self,'room_name'):
                 cache.set(self.room_name, players,3600)  #继续游戏
         else:
             #结算
@@ -158,7 +158,7 @@ class MultiPlayer(AsyncWebsocketConsumer):
     
     async def group_send_event(self,data): #与type一致
         #新增：在首次触发群发函数（即创建玩家时）分配房间
-        if not self.room_name:
+        if not self.room_name and hasattr(self,'room_name') :
             keys = cache.keys('*%s*' % (self.uuid))
             if keys:
                 self.room_name = keys[0]

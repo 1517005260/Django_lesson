@@ -27,4 +27,6 @@ Django课程已于[这里](https://git.acwing.com/glk/django_lesson/-/tree/5ca4d
 
 7.增加头像选择功能
 
+8.增加qq第三方登录
+
 ......
