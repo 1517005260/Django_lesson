@@ -51,7 +51,7 @@ class Pool:
     
     def match_success(self,ps):  #3名玩家匹配成功  ps=players[]
         print("Match Success: %s %s %s" % (ps[0].username, ps[1].username, ps[2].username))
-        room_name = "room-%s-%s-%s" % (ps[0].uuid, ps[1].uuid, ps[2].uuid)
+        room_name = "room-{}-{}-{}".format(ps[0].uuid, ps[1].uuid, ps[2].uuid)
         players = []  #在这个房间里的玩家
         for p in ps:
             async_to_sync(channel_layer.group_add)(room_name, p.channel_name)  #【关键】加入群组
