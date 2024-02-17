@@ -12,6 +12,8 @@ from match_system.src.match_server.match_service import Match
 from game.models.player.player import Player
 from channels.db import database_sync_to_async
 
+import re
+
 # 异步--多函数并发  // 如果没有async声明则默认为同步函数
 # 本程序的例子：在connect中的self.accept()时：connect函数会被阻塞，直到self.accept()执行完毕。但是，其他函数比如receive还在正常运作
 # 如果是同步：那么整个程序都会阻塞在self.accept()这里，不会像异步一样仅connect阻塞
@@ -162,4 +164,8 @@ class MultiPlayer(AsyncWebsocketConsumer):
             keys = cache.keys('*%s*' % (self.uuid))
             if keys:
                 self.room_name = keys[0]
-        await self.send(text_data=json.dumps(data))
+
+        def valid_group_name(name):  #是否符合ASCII码规则
+            return bool(re.match(r'^[a-zA-Z0-9\-.]+$', name))
+        if self.room_name and valid_group_name(self.room_name):
+            await self.send(text_data=json.dumps(data))
