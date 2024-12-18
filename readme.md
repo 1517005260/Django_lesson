@@ -7,16 +7,11 @@
 ## 视频演示
 ### 登录及人机对战：
 
-<video width="640" height="360" controls>
-  <source src="./video/login+one.mp4" type="video/mp4">
-</video>
+![one](./video/login+one.mp4)
 
 ### 多人对战
 
-<video width="640" height="360" controls>
-  <source src="./video/multi.mp4" type="video/mp4">
-</video>
-
+![multi](./video/multi.mp4)
 
 ## 如果遇到这个问题：
 修改完你的代码，检查无误后并已经执行过js的归并程序，却发现网页是空白的，解决方法是：在网页执行`<ctrl>+<shift>+<R>`强制刷新
