@@ -7,11 +7,11 @@
 ## 视频演示
 ### 登录及人机对战：
 
-![one](./video/login+one.mp4)
+<video src="https://github.com/user-attachments/assets/53f80389-972b-4e2d-890d-58f1cc4d25f4" width="640" height="480" controls></video>
 
 ### 多人对战
 
-![multi](./video/multi.mp4)
+<video src="https://github.com/user-attachments/assets/90f32559-501e-4c18-9867-670f68adeb3d" width="640" height="480" controls></video>
 
 ## 如果遇到这个问题：
 修改完你的代码，检查无误后并已经执行过js的归并程序，却发现网页是空白的，解决方法是：在网页执行`<ctrl>+<shift>+<R>`强制刷新
